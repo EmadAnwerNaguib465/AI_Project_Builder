@@ -74,6 +74,9 @@ class LLMService:
                 model=settings.llm_model,
                 temperature=settings.llm_temperature,
                 max_output_tokens=settings.llm_max_tokens,
+                thinking_level="low" if settings.llm_model.startswith("gemini-3") else None,
+                timeout=120,
+                max_retries=1,
                 convert_system_message_to_human=False,
             )
             logger.info(f"LLM initialized: {settings.llm_model}")
@@ -122,7 +125,7 @@ class LLMService:
             messages.append(HumanMessage(content=user_prompt))
 
             response = llm.invoke(messages)
-            return response.content
+            return str(response.text)
 
         except Exception as e:
             log_error(logger, "LLMService.invoke", e)

@@ -36,7 +36,7 @@ Public API:
         print(f"Agent {agent} completed")
 """
 
-from typing import Generator
+from typing import Callable, Generator
 
 from langgraph.graph import StateGraph, END
 
@@ -62,6 +62,18 @@ NODE_CRITIC     = "critic"
 NODE_REPORT     = "report"
 
 
+def checked_node(name: str, agent: Callable) -> Callable:
+    def run(state: ProjectState) -> dict:
+        update = agent(state)
+        if update.get("error"):
+            raise RuntimeError(f"{name}: {update['error']}")
+        if name == NODE_REPORT and not update.get("final_report"):
+            raise RuntimeError("report: No report was generated.")
+        return update
+
+    return run
+
+
 def build_graph() -> StateGraph:
     """
     Constructs and returns the compiled LangGraph StateGraph.
@@ -75,12 +87,12 @@ def build_graph() -> StateGraph:
     workflow = StateGraph(ProjectState)
 
     # ── Register all nodes ─────────────────────────────────────────────────
-    workflow.add_node(NODE_SUPERVISOR, run_supervisor)
-    workflow.add_node(NODE_RESEARCH,   run_research_agent)
-    workflow.add_node(NODE_RAG,        run_rag_agent)
-    workflow.add_node(NODE_ARCHITECT,  run_architect_agent)
-    workflow.add_node(NODE_CRITIC,     run_critic_agent)
-    workflow.add_node(NODE_REPORT,     run_report_agent)
+    workflow.add_node(NODE_SUPERVISOR, checked_node(NODE_SUPERVISOR, run_supervisor))
+    workflow.add_node(NODE_RESEARCH, checked_node(NODE_RESEARCH, run_research_agent))
+    workflow.add_node(NODE_RAG, checked_node(NODE_RAG, run_rag_agent))
+    workflow.add_node(NODE_ARCHITECT, checked_node(NODE_ARCHITECT, run_architect_agent))
+    workflow.add_node(NODE_CRITIC, checked_node(NODE_CRITIC, run_critic_agent))
+    workflow.add_node(NODE_REPORT, checked_node(NODE_REPORT, run_report_agent))
 
     # ── Entry point ─────────────────────────────────────────────────────────
     workflow.set_entry_point(NODE_SUPERVISOR)

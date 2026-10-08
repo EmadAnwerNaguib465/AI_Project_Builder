@@ -1,3 +1,16 @@
+> **New React studio:** The primary interface now lives in `web/` (Next.js). The Python agents run behind `api.py` (FastAPI). The old `app.py` Streamlit interface remains only as a legacy reference.
+>
+> **Run locally (two terminals):**
+> ```powershell
+> .venv\Scripts\python.exe -m uvicorn api:api --host 127.0.0.1 --port 8000
+> ```
+> ```powershell
+> cd web
+> npm install
+> npm run dev -- --hostname 127.0.0.1 --port 3001
+> ```
+> Open **http://127.0.0.1:3001**. Set `GOOGLE_API_KEY` in the root `.env` before building a plan. Use `.venv\Scripts\python.exe scripts\ingest_documents.py` once to prepare the knowledge base. The Next.js server proxies `/api/build` to the Python API; set `PLANNER_API_URL` if the API runs elsewhere.
+
 <div align="center">
 
 # 🤖 AI Project Builder

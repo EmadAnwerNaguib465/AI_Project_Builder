@@ -1,6 +1,8 @@
  
 # --- Secrets (CRITICAL — never commit) ---
 .env
+.env.*
+!.env.example
 *.key
 *.pem
 
@@ -11,6 +13,7 @@ __pycache__/
 *.so
 .Python
 build/
+!web/app/api/build/
 dist/
 *.egg-info/
 .eggs/
@@ -41,6 +44,11 @@ data/chroma/
 
 # --- Streamlit ---
 .streamlit/
+web/node_modules/
+web/.next/
+web/out/
+web/tsconfig.tsbuildinfo
+web/.screens/
 
 # --- Evaluation Results (optional, may want to commit test_cases.json) ---
 evaluation/evaluation_results.json

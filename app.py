@@ -350,7 +350,7 @@ st.markdown("""
   <p class="hero-subtitle">Describe your AI idea — six specialized agents will design<br>your complete project plan in minutes.</p>
   <div>
     <span class="badge badge-blue">LangGraph</span>
-    <span class="badge badge-purple">Gemini 2.0</span>
+        <span class="badge badge-purple">Gemini</span>
     <span class="badge badge-cyan">RAG</span>
     <span class="badge badge-green">Multi-Agent</span>
   </div>
@@ -489,7 +489,6 @@ elif st.session_state.pipeline_state == "running":
             # Update UI
             step_placeholder.markdown(render_steps(next_agent, done), unsafe_allow_html=True)
             progress = int((len(done) / len(AGENTS)) * 100)
-            agent_display = dict(AGENTS).get(node_name, ("", node_name, ""))[1] if node_name in dict(a[0] for a in AGENTS) else node_name
             progress_bar.progress(progress, text=f"Completed: {node_name} ({progress}%)")
 
         # All done
