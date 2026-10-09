@@ -63,7 +63,7 @@ class WebSearchResponse:
         return [r.url for r in self.results if r.url]
 
 
-def web_search(query: str, max_results: int = 5) -> WebSearchResponse:
+def web_search(query: str, max_results: int = 5, include_domains: Optional[list[str]] = None) -> WebSearchResponse:
     """
     Performs a web search using the Tavily API.
 
@@ -103,6 +103,8 @@ def web_search(query: str, max_results: int = 5) -> WebSearchResponse:
             search_depth="basic",   # "basic" is faster; "advanced" is more thorough
             max_results=min(max_results, 10),
             include_answer=False,   # We want raw results for the LLM to synthesize
+            include_domains=include_domains,
+            timeout=20,
         )
 
         results = []

@@ -6,6 +6,7 @@ Represents the complete AI project plan delivered to the user.
 """
 
 from pydantic import BaseModel, Field
+from app.models.dataset_models import DatasetRecommendation
 
 
 class FinalProjectPlan(BaseModel):
@@ -35,6 +36,12 @@ class FinalProjectPlan(BaseModel):
     dataset_plan: str = Field(
         description="Detailed dataset plan: what data, where to get it, how to process it."
     )
+
+    dataset_recommendations: list[DatasetRecommendation] = Field(
+        default_factory=list,
+        description="Populated by the application from source-backed research. Leave empty in LLM output.",
+    )
+    dataset_discovery_note: str = Field(default="", description="Populated by the application; leave empty.")
 
     model_plan: str = Field(
         description="Model selection rationale, training approach, and evaluation strategy."

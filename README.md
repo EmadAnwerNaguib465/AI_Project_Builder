@@ -11,6 +11,10 @@
 > ```
 > Open **http://127.0.0.1:3001**. Set `GOOGLE_API_KEY` in the root `.env` before building a plan. Use `.venv\Scripts\python.exe scripts\ingest_documents.py` once to prepare the knowledge base. The Next.js server proxies `/api/build` to the Python API; set `PLANNER_API_URL` if the API runs elsewhere.
 
+Transient model failures (500/502/503/504 and transport errors) retry the same LLM call up to `LLM_MAX_ATTEMPTS` total attempts (default 4), with exponential backoff and jitter. Earlier pipeline stages are not rerun during these automatic retries. Authentication, quota, and validation errors fail immediately. If all attempts fail, wait before starting a new build; completed pipeline state is not persisted across requests.
+
+New reports include structured dataset recommendations with original catalog links, project-fit notes, and source-provided metadata. Discovery uses the Hugging Face API plus Tavily searches restricted to Hugging Face, Kaggle, and UCI dataset pages. The research model selects existing candidate IDs; the report model cannot replace their URLs or metadata. Missing metadata stays unknown, and no live results means no invented fallback links. Search discovery does not guarantee current download availability or license suitability. Existing reports remain readable but must be regenerated to include recommendations.
+
 <div align="center">
 
 # 🤖 AI Project Builder

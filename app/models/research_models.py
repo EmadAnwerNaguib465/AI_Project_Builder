@@ -6,6 +6,7 @@ Represents findings from web search and dataset discovery.
 """
 
 from pydantic import BaseModel, Field
+from app.models.dataset_models import DatasetSelection
 
 
 class ResearchResult(BaseModel):
@@ -14,6 +15,12 @@ class ResearchResult(BaseModel):
     Aggregates web search results and dataset discovery into structured form.
     Consumed by the RAG Agent and Architect Agent.
     """
+
+    dataset_selections: list[DatasetSelection] = Field(
+        default_factory=list,
+        description="Select up to five relevant dataset candidate IDs from tool results only. Empty if none fit.",
+        max_length=5,
+    )
 
     summary: str = Field(
         description="A concise 2-4 sentence summary of the research findings."

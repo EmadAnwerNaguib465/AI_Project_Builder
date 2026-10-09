@@ -11,7 +11,10 @@ Input  (from state): all state fields
 Output (to state):   final_report (dict), current_agent (str)
 """
 
+import json
+
 from app.graph.state import ProjectState
+from app.models.dataset_models import DatasetRecommendation
 from app.models.report_models import FinalProjectPlan
 from app.services.llm_service import llm_service
 from app.utils.logger import get_logger, log_agent_start, log_agent_complete, log_error
@@ -91,6 +94,7 @@ def run_report_agent(state: ProjectState) -> dict:
             tech_stack=", ".join(architecture.get("tech_stack", [])),
             deployment_approach=architecture.get("deployment_approach", ""),
             recommended_datasets=", ".join(dataset_strategy.get("recommended_datasets", [])),
+            dataset_candidates=json.dumps(research_results.get("dataset_recommendations", []), ensure_ascii=False),
             data_collection_approach=dataset_strategy.get("data_collection_approach", ""),
             preprocessing_steps="\n".join(f"- {s}" for s in dataset_strategy.get("preprocessing_steps", [])),
             estimated_data_size=dataset_strategy.get("estimated_data_size", ""),
@@ -122,6 +126,18 @@ def run_report_agent(state: ProjectState) -> dict:
 
         # Inject revision count from state (source of truth)
         final_plan.revision_count = revision_count
+
+        # URLs and metadata must survive synthesis unchanged from the discovery tools.
+        final_plan.dataset_recommendations = [
+            DatasetRecommendation.model_validate(item)
+            for item in research_results.get("dataset_recommendations", [])
+        ]
+        final_plan.dataset_discovery_note = research_results.get(
+            "dataset_discovery_note", "No source-backed dataset recommendations are available for this plan."
+        )
+        final_plan.sources = list(dict.fromkeys(
+            final_plan.sources + [item.url for item in final_plan.dataset_recommendations]
+        ))
 
         # Merge sources
         if sources:

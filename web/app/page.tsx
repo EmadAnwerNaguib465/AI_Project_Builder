@@ -1,13 +1,13 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowRight, ArrowUp, ArrowUpRight, Asterisk, Boxes, Check, CircleHelp, FileCheck2, FileText, Layers3, LoaderCircle, Pause, Play, RotateCcw, ScanEye, ScanSearch, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowRight, ArrowUpRight, Asterisk, Boxes, Check, CircleHelp, FileCheck2, FileText, Layers3, LoaderCircle, Pause, Play, RotateCcw, ScanEye, ScanSearch, ShieldCheck, TrendingUp } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import ReportView from "@/components/report-view";
 import { AGENTS, type AgentName, type PipelineEvent, type ProjectReport } from "@/lib/types";
 
-const PipelineScene = dynamic(() => import("@/components/pipeline-scene"), { ssr: false });
+import PipelineMap from "@/components/pipeline-map";
+import { Intro, StudioHeader } from "@/components/studio-chrome";
 const EXAMPLES = [
   { label: "Vision", idea: "Build a computer vision system that detects product defects on a manufacturing line, using public image datasets and a real-time dashboard." },
   { label: "Knowledge", idea: "Create a RAG assistant that answers student questions from university PDF documents, cites sources, and works with a limited budget." },
@@ -30,6 +30,7 @@ export default function StudioPage() {
   const [error, setError] = useState("");
   const [revisions, setRevisions] = useState(0);
   const [scenePaused, setScenePaused] = useState(false);
+  const [exampleIndex, setExampleIndex] = useState(0);
   const [service, setService] = useState<"checking" | "ready" | "offline">("checking");
   const controllerRef = useRef<AbortController | null>(null);
   const resultRef = useRef<HTMLDivElement>(null);
@@ -136,57 +137,68 @@ export default function StudioPage() {
     }
   };
 
-  const activeIndex = mode === "complete" ? 5 : current ? AGENTS.findIndex((agent) => agent.id === current) : -1;
   const progress = mode === "complete" ? 100 : Math.round(completed.length / AGENTS.length * 100);
   const selectedExample = EXAMPLES.findIndex((example) => example.idea === idea);
+  const chooseExample = (index: number) => {
+    if (mode === "running") return;
+    setIdea(EXAMPLES[index].idea);
+    setError("");
+    setMode("idle");
+    setExampleIndex(index);
+    document.getElementById("idea")?.focus({ preventScroll: true });
+  };
+  const exampleTitles = ["An eye for every detail.", "Knowledge, connected.", "See what comes next."];
+  const ExampleIcon = EXAMPLE_ICONS[exampleIndex];
+  const reveal = { initial: reduceMotion ? false as const : { opacity: 0, y: 24 }, whileInView: { opacity: 1, y: 0 }, viewport: { once: true, amount: 0.12 }, transition: { duration: 0.65 } };
 
   return <main className="app-shell" data-motion={scenePaused || reduceMotion ? "paused" : "active"} data-mode={mode}>
-    <header className="topbar">
-      <a className="brand" href="#workspace" aria-label="AI Project Builder workspace"><span className="brand-mark"><Asterisk size={31} strokeWidth={2.5} /></span><span className="brand-text">AI PROJECT<br />BUILDER<span>.</span></span></a>
-      <nav className="top-nav" aria-label="Workspace navigation"><a href="#workspace">Workspace <ArrowUpRight size={13} /></a><a href="#pipeline">Pipeline</a>{report && <a href="#blueprint">Blueprint</a>}</nav>
-      <div className="top-actions"><span className={`service-indicator ${service}`}><i />{service === "checking" ? "Connecting" : service === "ready" ? "System ready" : "Service offline"}</span>{mode === "complete" && <button type="button" className="new-plan" title="New plan" aria-label="New plan" onClick={reset}><RotateCcw size={17} /></button>}</div>
-    </header>
-
-    <section id="workspace" className={`workspace ${mode === "complete" ? "workspace-compact" : ""}`} aria-labelledby="workspace-title">
-      <div className="workspace-guides" aria-hidden="true"><i /><i /><i /><i /></div>
-      <div className="workspace-content">
-        <div className="workspace-meta"><span className="eyebrow"><span className="live-line" /> THE PROJECT STUDIO / 001</span><button className="scene-toggle" type="button" disabled={Boolean(reduceMotion)} title={reduceMotion ? "Reduced motion is enabled" : scenePaused ? "Play 3D animation" : "Pause 3D animation"} aria-label={scenePaused ? "Play 3D animation" : "Pause 3D animation"} aria-pressed={scenePaused || Boolean(reduceMotion)} onClick={() => setScenePaused((value) => !value)}>{scenePaused || reduceMotion ? <Play size={15} /> : <Pause size={15} />}</button></div>
-        <div className="workspace-copy">
-          <motion.h1 id="workspace-title" initial={reduceMotion ? false : { opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.65 }}><span>AI PROJECT</span><span className="title-finish">BUILDER<span className="title-period">.</span></span></motion.h1>
-          <motion.p initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>What will you build next?</motion.p>
+    <Intro />
+    <StudioHeader hasReport={Boolean(report)} />
+    <section id="workspace" className="workspace" aria-labelledby="workspace-title">
+      <div className="hero-content shell">
+        <div className="hero-copy">
+          <span className="eyebrow"><i /> THE AI PROJECT STUDIO</span>
+          <h1 id="workspace-title"><span>AI Project</span><span>Builder<span className="title-dot">.</span></span></h1>
+          <p className="hero-description">Your idea, researched and reviewed.<br />A clear plan for what comes next.</p>
+          {mode !== "complete" ? <form className="brief-form" onSubmit={(event) => { event.preventDefault(); void submit(); }}>
+            <div className="form-heading"><label htmlFor="idea">Your project idea</label><span>{idea.length} / 2000</span></div>
+            <textarea id="idea" value={idea} onChange={(event) => setIdea(event.target.value)} maxLength={2000} disabled={mode === "running"} placeholder="A study assistant that answers questions from course PDFs and cites its sources..." rows={5} />
+            <div className="example-list">{EXAMPLES.map((example, index) => { const Icon = EXAMPLE_ICONS[index]; return <button key={example.label} type="button" aria-pressed={selectedExample === index} disabled={mode === "running"} onClick={() => chooseExample(index)}><Icon size={14} />{example.label}</button>; })}</div>
+            <div className="form-bottom"><button type="submit" className="build-button pill-button" disabled={mode === "running" || service === "offline"}><span>{mode === "running" ? "Building your plan" : "Build project plan"}</span><span className="button-badge">{mode === "running" ? <LoaderCircle size={18} className="spin" /> : <ArrowUpRight size={20} />}</span></button><a href="#pipeline" className="text-link">The process <ArrowDown size={15} /></a></div>
+            {mode === "error" && <div className="inline-error" role="alert"><CircleHelp size={18} /><span>{error}</span><button type="button" onClick={submit}>Retry</button></div>}
+          </form> : <div className="complete-brief"><span><Check size={18} />Your blueprint is ready.</span><a className="pill-button" href="#blueprint">View your plan<span className="button-badge"><ArrowDown size={18} /></span></a><button className="text-link" type="button" onClick={reset}><RotateCcw size={16} />New plan</button></div>}
         </div>
-        <div className="engine-stage">
-          <PipelineScene active={activeIndex} complete={mode === "complete"} paused={scenePaused} signal={Math.min(idea.trim().length / 400, 1)} variant={selectedExample < 0 ? 1 : selectedExample} />
-          <aside className="engine-readout" aria-label="Current stage">
-            <span className="eyebrow">CURRENT STAGE</span>
-            <strong>{mode === "complete" ? "Plan complete" : current ? AGENTS.find((agent) => agent.id === current)?.label : mode === "error" ? "On hold" : "Awaiting brief"}</strong>
-            <div className="signal-bars" aria-hidden="true">{Array.from({ length: 18 }, (_, index) => <i key={index} style={{ animationDelay: `${index * -0.13}s`, height: `${8 + ((index * 7) % 23)}px` }} />)}</div>
-            <span className="engine-counter"><b>{String(mode === "complete" ? 6 : completed.length).padStart(2, "0")}</b> / 06 COMPLETE</span>
-          </aside>
-          <div className="engine-caption"><span className="live-line" />{mode === "running" ? "PROCESSING" : mode === "complete" ? "BLUEPRINT READY" : mode === "error" ? "AWAITING RETRY" : "AWAITING YOUR IDEA"}</div>
-          <aside className="engine-roster" aria-label="Agent activity">{AGENTS.map((agent, index) => <div key={agent.id} className={`${current === agent.id ? "active" : ""} ${mode === "complete" || completed.includes(agent.id) ? "done" : ""}`}><span>{String(index + 1).padStart(2, "0")}</span><span>{agent.label}</span><i /></div>)}</aside>
-        </div>
-        {mode !== "complete" && <motion.form className={`brief-form ${mode === "running" ? "is-running" : ""}`} initial={reduceMotion ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} onSubmit={(event) => { event.preventDefault(); void submit(); }}>
-          <div className="form-heading"><label htmlFor="idea"><span>01</span> YOUR PROJECT BRIEF</label><span>{String(idea.length).padStart(3, "0")} / 2000</span></div>
-          <textarea id="idea" value={idea} onChange={(event) => setIdea(event.target.value)} maxLength={2000} disabled={mode === "running"} placeholder="What do you want to build?" spellCheck="true" />
-          <div className="form-bottom"><div className="example-list">{EXAMPLES.map((example, index) => { const Icon = EXAMPLE_ICONS[index]; return <button key={example.label} type="button" aria-pressed={selectedExample === index} disabled={mode === "running"} onClick={() => { setIdea(example.idea); setError(""); setMode("idle"); }}><Icon size={14} />{example.label}<ArrowUpRight size={12} className="example-arrow" /></button>; })}</div><button type="submit" className="build-button" disabled={mode === "running" || service === "offline"}>{mode === "running" ? <><span>Building your plan</span><LoaderCircle size={21} className="spin" /></> : <><span>Build project plan</span><ArrowUpRight size={24} /></>}</button></div>
-          {mode === "error" && <div className="inline-error" role="alert"><CircleHelp size={18} /><span>{error}</span><button type="button" onClick={submit}>Retry</button></div>}
-        </motion.form>}
-        {mode === "complete" && <a className="compact-message" href="#blueprint"><Check size={20} /><span>Your blueprint is ready.</span><ArrowDown size={20} /></a>}
-        <div className="workspace-bottom"><span><Sparkles size={13} />{mode === "running" ? "IDEA IN PROGRESS" : mode === "complete" ? "IDEA, MEET BLUEPRINT" : "A LITTLE AMBITION GOES A LONG WAY"}</span><a href="#pipeline">THE PIPELINE <ArrowDown size={14} /></a></div>
+        <aside className="hero-side">
+          <PipelineMap current={current} completed={completed} complete={mode === "complete"} paused={scenePaused || Boolean(reduceMotion)} />
+          <div className="example-carousel">
+            <div className="carousel-top"><span className="carousel-symbol"><ExampleIcon size={29} strokeWidth={1.3} /></span><div key={exampleIndex} className="carousel-title"><span>PROJECT DIRECTION / 0{exampleIndex + 1}</span><strong>{exampleTitles[exampleIndex]}</strong></div></div>
+            <div className="carousel-bottom"><button type="button" className="text-link" disabled={mode === "running"} onClick={() => chooseExample(exampleIndex)}>Use this idea <ArrowUpRight size={13} /></button><div className="carousel-controls"><button type="button" aria-label="Previous idea" title="Previous idea" onClick={() => setExampleIndex((exampleIndex + 2) % 3)}><ArrowLeft size={14} /></button><button type="button" aria-label="Next idea" title="Next idea" onClick={() => setExampleIndex((exampleIndex + 1) % 3)}><ArrowRight size={14} /></button></div></div>
+          </div>
+          <div className="hero-readout"><span>YOUR BUILD TEAM</span><div>{AGENTS.map((agent, index) => <span key={agent.id} className={completed.includes(agent.id) || mode === "complete" ? "done" : current === agent.id ? "active" : ""}><i />{String(index + 1).padStart(2, "0")} {agent.label}</span>)}</div></div>
+        </aside>
       </div>
+      <div className="hero-status shell"><span className={`service-indicator ${service}`}><i />{service === "checking" ? "Connecting" : service === "ready" ? "System ready" : "Service offline"}</span><span className="hero-status-middle">{mode === "running" ? `${AGENTS.find((agent) => agent.id === current)?.label ?? "Planning"} in progress` : "FROM A THOUGHT. TO A PLAN."}</span><button className="scene-toggle" type="button" disabled={Boolean(reduceMotion)} title={reduceMotion ? "Reduced motion is enabled" : scenePaused ? "Play visual effects" : "Pause visual effects"} aria-label={scenePaused ? "Play visual effects" : "Pause visual effects"} aria-pressed={scenePaused || Boolean(reduceMotion)} onClick={() => setScenePaused((value) => !value)}>{scenePaused || reduceMotion ? <Play size={14} /> : <Pause size={14} />}</button></div>
     </section>
 
-    <section id="pipeline" className="pipeline-section" aria-labelledby="pipeline-title">
-      <div className="pipeline-inner">
-        <div className="section-head"><div><span className="eyebrow">02 / THE PROCESS</span><h2 id="pipeline-title">The pipeline<span>.</span></h2></div><div className="process-status" aria-live="polite"><span>{mode === "running" ? "In progress" : mode === "complete" ? "Complete" : mode === "error" ? "Paused" : "Standing by"}</span><strong className="process-percent">{String(progress).padStart(2, "0")}<small>%</small></strong></div></div>
-        <div className="progress-track" role="progressbar" aria-label="Project plan progress" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progress}%` }} /></div>
-        <div className="agent-grid">{AGENTS.map((agent, index) => { const done = completed.includes(agent.id) || mode === "complete"; const active = mode === "running" && current === agent.id; const Icon = AGENT_ICONS[index]; return <motion.div key={agent.id} className={`agent-item ${done ? "done" : ""} ${active ? "active" : ""}`} initial={reduceMotion ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.3, delay: index * 0.05 }}><div className="agent-topline"><span>{String(index + 1).padStart(2, "0")}</span><ArrowRight size={15} /></div><div className="agent-icon">{done ? <Check size={27} /> : <Icon size={27} strokeWidth={1.5} />}</div><strong>{agent.label}</strong><span className="agent-detail">{agent.detail}</span><span className="agent-state">{active && <LoaderCircle size={11} className="spin" />}{done ? "DONE" : active ? "WORKING" : "QUEUED"}</span></motion.div>; })}</div>
-        {revisions > 0 && <p className="revision-note"><RotateCcw size={12} /> Review cycle {revisions} {mode === "complete" ? "completed." : "in progress."}</p>}
-      </div>
+    <section className="studio-statement shell" aria-label="Project planning">
+      <span className="eyebrow"><i /> IDEA TO IMPLEMENTATION</span>
+      <motion.h2 {...reveal}>A little ambition.<br /><span>A well-considered next step.</span></motion.h2>
+      <div className="create-band" aria-hidden="true"><span>You</span><span>Imagine</span><span><ArrowRight size={44} /></span><span>We plan.</span></div>
     </section>
 
-    <AnimatePresence>{report && mode === "complete" && <motion.div id="blueprint" ref={resultRef} className="report-transition" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}><ReportView report={report} onReset={reset} /></motion.div>}</AnimatePresence>
-    <footer className="footer"><div className="footer-brand"><Asterisk size={24} /><span>AI PROJECT BUILDER.</span></div><span className="footer-note">FROM A THOUGHT. TO A PLAN.</span><a className="back-to-top" href="#workspace" title="Back to workspace" aria-label="Back to workspace"><ArrowUp size={20} /></a></footer>
+    <section id="ideas" className="ideas-section shell" aria-labelledby="ideas-title">
+      <div className="section-head"><div><span className="eyebrow"><i /> A STARTING POINT</span><h2 id="ideas-title">Ideas worth building.</h2></div><span className="section-aside">03 PROJECT DIRECTIONS</span></div>
+      <div className="idea-grid">{EXAMPLES.map((example, index) => { const Icon = EXAMPLE_ICONS[index]; return <motion.button {...reveal} transition={{ duration: 0.6, delay: index * 0.08 }} type="button" className={`idea-card idea-card-${index}`} key={example.label} disabled={mode === "running"} onClick={() => { chooseExample(index); document.getElementById("workspace")?.scrollIntoView({ behavior: "instant" }); }}><span key="meta" className="idea-card-meta"><span>0{index + 1} / {example.label}</span><span className="round-arrow"><ArrowUpRight size={19} /></span></span><span key="art" className="idea-art" aria-hidden="true"><Icon size={84} strokeWidth={0.8} /><i /><i /></span><span key="copy" className="idea-card-copy"><strong>{exampleTitles[index]}</strong><span>{index === 0 ? "Visual inspection. Defect detection. Quality, at scale." : index === 1 ? "Your documents. Grounded answers. Sources included." : "Customer signals. Clear predictions. Informed decisions."}</span><span className="idea-tag">{index === 0 ? "Computer vision" : index === 1 ? "Retrieval-augmented generation" : "Predictive machine learning"}</span></span></motion.button>; })}</div>
+    </section>
+
+    <section id="pipeline" className="pipeline-section shell" aria-labelledby="pipeline-title">
+      <div className="section-head"><div><span className="eyebrow"><i /> THE PROCESS</span><h2 id="pipeline-title">Six perspectives.<br />One considered plan.</h2></div><div className="process-status" aria-live="polite"><span>{mode === "running" ? "In progress" : mode === "complete" ? "Complete" : mode === "error" ? "On hold" : "Standing by"}</span><strong className="process-percent">{String(progress).padStart(2, "0")}<small>%</small></strong></div></div>
+      <div className="progress-track" role="progressbar" aria-label="Project plan progress" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progress}%` }} /></div>
+      <div className="agent-grid">{AGENTS.map((agent, index) => { const done = completed.includes(agent.id) || mode === "complete"; const active = mode === "running" && current === agent.id; const Icon = AGENT_ICONS[index]; return <motion.div {...reveal} key={agent.id} className={`agent-item ${done ? "done" : ""} ${active ? "active" : ""}`}><span key="number" className="agent-number">0{index + 1}</span><div key="icon" className="agent-icon">{done ? <Check size={23} /> : <Icon size={23} strokeWidth={1.4} />}</div><strong key="label">{agent.label}</strong><span key="detail" className="agent-detail">{agent.detail}</span><span key="state" className="agent-state">{active && <LoaderCircle size={13} className="spin" />}{done ? "COMPLETE" : active ? "WORKING" : "QUEUED"}</span><ArrowUpRight key="arrow" className="agent-arrow" size={21} /></motion.div>; })}</div>
+      {revisions > 0 && <p className="revision-note"><RotateCcw size={13} />Review cycle {revisions} {mode === "complete" ? "completed." : "in progress."}</p>}
+    </section>
+
+    <AnimatePresence>{report && mode === "complete" && <motion.div id="blueprint" ref={resultRef} className="report-transition" initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}><ReportView report={report} onReset={reset} /></motion.div>}</AnimatePresence>
+    <footer className="footer"><div className="shell"><div className="footer-cta"><h2>Your next big idea.<br /><span>Starts right here.</span></h2><a className="pill-button light" href="#workspace">Back to your workspace<span className="button-badge"><ArrowUpRight size={21} /></span></a></div><div className="footer-links"><a className="brand" href="#workspace"><Asterisk size={28} />AI Project Builder.</a><nav aria-label="Footer navigation"><a href="#ideas">Project ideas</a><a href="#pipeline">The process</a>{report && <a href="#blueprint">Your blueprint</a>}</nav><span>RESEARCH. ARCHITECTURE. DIRECTION.</span></div><div className="footer-wordmark" aria-hidden="true">BUILDER.</div></div></footer>
   </main>;
 }

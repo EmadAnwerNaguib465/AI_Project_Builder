@@ -8,9 +8,9 @@ import type { ProjectReport } from "@/lib/types";
 const SECTIONS = ["Overview", "Architecture", "Dataset", "Model", "Roadmap", "Sources"] as const;
 type Section = (typeof SECTIONS)[number];
 
-function Markdown({ children }: { children: string }) {
+function Markdown({ children, allowedUrls }: { children: string; allowedUrls?: string[] }) {
   return <div className="report-markdown"><ReactMarkdown components={{
-    a: ({ href, children: content }) => href?.startsWith("https://") || href?.startsWith("http://")
+    a: ({ href, children: content }) => href && (href.startsWith("https://") || href.startsWith("http://")) && (!allowedUrls || allowedUrls.includes(href))
       ? <a href={href} target="_blank" rel="noopener noreferrer">{content}<ArrowUpRight size={13} aria-hidden="true" /></a>
       : <span>{content}</span>,
   }}>{children}</ReactMarkdown></div>;
@@ -18,6 +18,7 @@ function Markdown({ children }: { children: string }) {
 
 export default function ReportView({ report, onReset }: { report: ProjectReport; onReset: () => void }) {
   const [activeSection, setActiveSection] = useState<Section>("Overview");
+  const datasets = (report.dataset_recommendations ?? []).filter((dataset) => dataset.url.startsWith("https://"));
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -82,7 +83,18 @@ export default function ReportView({ report, onReset }: { report: ProjectReport;
     </section>
     <section className="report-section" id="report-dataset" aria-labelledby="report-dataset-title">
       <h3 id="report-dataset-title">Dataset strategy</h3>
-      <div className="prose-block"><Markdown>{report.dataset_plan}</Markdown></div>
+      <div className="prose-block">
+        <div className="dataset-heading"><h4>Recommended datasets</h4><span>{datasets.length} {datasets.length === 1 ? "source" : "sources"}</span></div>
+        <p className="dataset-note">{report.dataset_discovery_note || (datasets.length ? "Dataset candidates from catalog and search results. Review the source terms before use." : "No source-backed dataset recommendations are available for this plan.")}</p>
+        {datasets.length > 0 && <ul className="dataset-list">{datasets.map((dataset) => <li className="dataset-recommendation" key={dataset.url}>
+          <div className="dataset-card-heading"><div><span className="dataset-provider">{dataset.provider}</span><h4>{dataset.name}</h4></div><a href={dataset.url} target="_blank" rel="noopener noreferrer" className="dataset-link" aria-label={`Open ${dataset.name} dataset`}><span>Open dataset</span><ArrowUpRight size={17} /></a></div>
+          <p className="dataset-description">{dataset.description}</p>
+          <div className="dataset-fit"><strong>Project fit</strong><p>{dataset.relevance}</p></div>
+          <dl className="dataset-metadata">{[["Data type", dataset.data_type], ["Size / range", dataset.size], ["License", dataset.license], ["Access", dataset.access]].map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "Not provided by source"}</dd></div>)}</dl>
+          <span className="dataset-provenance">Found via {dataset.discovery_source}</span>
+        </li>)}</ul>}
+        <Markdown allowedUrls={datasets.map((dataset) => dataset.url)}>{report.dataset_plan}</Markdown>
+      </div>
     </section>
     <section className="report-section" id="report-model" aria-labelledby="report-model-title">
       <h3 id="report-model-title">Model strategy</h3>

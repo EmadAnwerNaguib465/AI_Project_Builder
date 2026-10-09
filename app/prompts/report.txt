@@ -42,6 +42,7 @@ Tech Stack: {tech_stack}
 Deployment: {deployment_approach}
 
 ### Dataset Strategy
+Source-backed recommendations (preserve names and facts): {dataset_candidates}
 Datasets: {recommended_datasets}
 Collection: {data_collection_approach}
 Preprocessing: {preprocessing_steps}
@@ -72,6 +73,10 @@ Minimum 200 words.
 ### dataset_plan field
 Write a complete markdown-formatted dataset plan.
 Cover: what datasets, where to get them, how to process them, challenges, and augmentation.
+Only name specific datasets present in Source-backed recommendations. If none fit, explain data collection instead.
+Do not include URLs in dataset_plan; the application renders source-backed links separately.
+Do not guess missing sizes, licenses, access permissions, or direct download availability.
+Leave dataset_recommendations and dataset_discovery_note empty; the application populates them from research.
 Minimum 150 words.
 
 ### model_plan field

@@ -1,11 +1,26 @@
 export type AgentName = "supervisor" | "research" | "rag" | "architect" | "critic" | "report";
 
+export interface DatasetRecommendation {
+  name: string;
+  url: string;
+  description: string;
+  relevance: string;
+  provider: string;
+  discovery_source: string;
+  data_type: string | null;
+  size: string | null;
+  license: string | null;
+  access: string | null;
+}
+
 export interface ProjectReport {
   project_title: string;
   executive_summary: string;
   objectives: string[];
   technical_architecture: string;
   dataset_plan: string;
+  dataset_recommendations?: DatasetRecommendation[];
+  dataset_discovery_note?: string;
   model_plan: string;
   implementation_roadmap: string[];
   risks_and_mitigations: string[];

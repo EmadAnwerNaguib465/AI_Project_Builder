@@ -21,6 +21,7 @@ from app.models.research_models import ResearchResult
 from app.models.state_models import Requirements
 from app.services.llm_service import llm_service
 from app.services.search_service import search_service
+from app.tools.dataset_search import DatasetSearchResponse
 from app.utils.logger import get_logger, log_agent_start, log_agent_complete, log_error
 
 logger = get_logger(__name__)
@@ -69,8 +70,9 @@ def run_research_agent(state: ProjectState) -> dict:
     logger.info(f"Researching: '{project_title}' ({project_type})")
 
     # --- 2. Run search tools ---
+    dataset_response = DatasetSearchResponse(query="", project_type=project_type)
     try:
-        web_results_str, dataset_results_str, tool_sources = search_service.run_research_search(
+        web_results_str, dataset_results_str, tool_sources, dataset_response = search_service.run_research_search(
             requirements=requirements,
             max_web_results=5,
             max_dataset_results=5,
@@ -131,10 +133,21 @@ def run_research_agent(state: ProjectState) -> dict:
         research_result.sources + tool_sources
     ))  # deduplicated, order preserved
 
+    recommendations = dataset_response.resolve(research_result.dataset_selections)
+    research_result.dataset_hints = [f"{dataset.name}: {dataset.relevance}" for dataset in recommendations]
+    research_data = research_result.model_dump()
+    research_data["dataset_recommendations"] = [dataset.model_dump() for dataset in recommendations]
+    research_data["dataset_discovery_note"] = (
+        "Recommendations selected from live catalog and search results. Availability and terms may change."
+        if recommendations else
+        "No suitable dataset was selected from the available search results. Consider collecting project-specific data."
+        if dataset_response.datasets else
+        "Dataset discovery returned no usable results or was unavailable. No dataset links could be confirmed from search."
+    )
     log_agent_complete(logger, "Research Agent")
 
     return {
-        "research_results": research_result.model_dump(),
+        "research_results": research_data,
         "sources": all_sources,
         "current_agent": "rag",
         "error": None,

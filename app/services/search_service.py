@@ -9,7 +9,7 @@ then returns formatted strings ready for LLM prompt injection.
 Usage:
     from app.services.search_service import SearchService
     svc = SearchService()
-    web_str, dataset_str = svc.run_research_search(requirements)
+    web_str, dataset_str, sources, datasets = svc.run_research_search(requirements)
 """
 
 from app.models.state_models import Requirements
@@ -33,7 +33,7 @@ class SearchService:
         requirements: dict,
         max_web_results: int = 5,
         max_dataset_results: int = 5,
-    ) -> tuple[str, str, list[str]]:
+    ) -> tuple[str, str, list[str], DatasetSearchResponse]:
         """
         Runs web search and dataset search for a given set of requirements.
 
@@ -46,7 +46,8 @@ class SearchService:
             Tuple of:
                 - web_results_str (str): Formatted web search results for prompt injection
                 - dataset_results_str (str): Formatted dataset results for prompt injection
-                - sources (list[str]): All source URLs collected
+        - sources (list[str]): All source URLs collected
+        - dataset_response (DatasetSearchResponse): Raw candidates for source-safe selection
         """
         project_title = requirements.get("project_title", "AI Project")
         project_type = requirements.get("project_type", "general")
@@ -76,6 +77,8 @@ class SearchService:
             project_type=project_type,
             domain=target_domain,
             max_results=max_dataset_results,
+            project_title=project_title,
+            objectives=objectives,
         )
         dataset_results_str = dataset_response.to_formatted_string()
 
@@ -90,7 +93,7 @@ class SearchService:
             f"{len(sources)} total sources"
         )
 
-        return web_results_str, dataset_results_str, sources
+        return web_results_str, dataset_results_str, sources, dataset_response
 
     @staticmethod
     def _build_web_query(

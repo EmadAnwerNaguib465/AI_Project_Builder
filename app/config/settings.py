@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     llm_model: str = Field(default="gemini-3.5-flash-lite", description="Primary LLM model name")
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
     llm_max_tokens: int = Field(default=8192, gt=0)
+    llm_max_attempts: int = Field(default=4, ge=1, le=6)
 
     # --- Embedding Configuration ---
     embedding_model: str = Field(default="text-embedding-3-small")

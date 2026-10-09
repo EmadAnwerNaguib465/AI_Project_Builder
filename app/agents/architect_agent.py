@@ -97,6 +97,12 @@ def run_architect_agent(state: ProjectState) -> dict:
             model_hints="\n".join(f"- {m}" for m in model_hints) or "See research summary",
             retrieved_context=retrieved_context or "No knowledge base context available.",
         )
+        prompt_context += (
+            "\n\nSource-backed dataset recommendations:\n"
+            + json.dumps(research_results.get("dataset_recommendations", []), ensure_ascii=False)
+            + "\nUse these datasets only when appropriate. Do not invent dataset links or metadata. "
+            "If none fit, propose collecting project-specific data. Benchmarks do not replace private RAG documents."
+        )
     except (FileNotFoundError, ValueError) as e:
         log_error(logger, "Architect Agent [prompt]", e)
         return {

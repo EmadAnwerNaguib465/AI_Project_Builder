@@ -20,9 +20,13 @@ Usage:
 """
 
 import os
+from time import sleep
 from pathlib import Path
 from typing import Type, TypeVar, Optional
 from pydantic import BaseModel
+from google.genai.errors import APIError
+from httpx import TimeoutException, TransportError
+from tenacity import Retrying, retry_if_exception, stop_after_attempt, wait_exponential_jitter
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
@@ -38,6 +42,21 @@ T = TypeVar("T", bound=BaseModel)
 
 # Directory containing prompt .txt files
 PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
+
+
+def is_transient_llm_error(error: BaseException) -> bool:
+    return (
+        isinstance(error, APIError) and error.code in {500, 502, 503, 504}
+    ) or isinstance(error, (TimeoutException, TransportError))
+
+
+def llm_failure_message(error: Exception, context: str) -> str:
+    if is_transient_llm_error(error):
+        return (
+            f"The AI provider is temporarily unavailable after {settings.llm_max_attempts} attempts. "
+            "Please wait a minute and try again."
+        )
+    return f"{context}: {type(error).__name__}: {error}"
 
 
 class LLMService:
@@ -76,6 +95,7 @@ class LLMService:
                 max_output_tokens=settings.llm_max_tokens,
                 thinking_level="low" if settings.llm_model.startswith("gemini-3") else None,
                 timeout=120,
+                # One SDK attempt; the service owns the bounded retry policy.
                 max_retries=1,
                 convert_system_message_to_human=False,
             )
@@ -97,6 +117,28 @@ class LLMService:
         """
         llm = self._get_llm()
         return llm.with_structured_output(output_model)
+
+    @staticmethod
+    def _invoke_with_retry(runnable: Runnable, messages: list):
+        def log_retry(state):
+            logger.warning(
+                "Transient LLM failure (%s), attempt %s/%s; retrying in %.1fs",
+                type(state.outcome.exception()).__name__,
+                state.attempt_number,
+                settings.llm_max_attempts,
+                state.next_action.sleep,
+            )
+
+        # Retry only the failed call, retaining the agent's prompt and upstream work.
+        retry = Retrying(
+            retry=retry_if_exception(is_transient_llm_error),
+            stop=stop_after_attempt(settings.llm_max_attempts),
+            wait=wait_exponential_jitter(initial=2, max=20, jitter=1),
+            sleep=sleep,
+            before_sleep=log_retry,
+            reraise=True,
+        )
+        return retry(runnable.invoke, messages)
 
     def invoke(
         self,
@@ -124,12 +166,12 @@ class LLMService:
                 messages.append(SystemMessage(content=system_prompt))
             messages.append(HumanMessage(content=user_prompt))
 
-            response = llm.invoke(messages)
+            response = self._invoke_with_retry(llm, messages)
             return str(response.text)
 
         except Exception as e:
             log_error(logger, "LLMService.invoke", e)
-            raise RuntimeError(f"LLM call failed: {type(e).__name__}: {e}") from e
+            raise RuntimeError(llm_failure_message(e, "LLM call failed")) from e
 
     def invoke_structured(
         self,
@@ -160,7 +202,7 @@ class LLMService:
                 messages.append(SystemMessage(content=system_prompt))
             messages.append(HumanMessage(content=user_prompt))
 
-            result = structured_llm.invoke(messages)
+            result = self._invoke_with_retry(structured_llm, messages)
 
             # Validate the returned object is actually the right type
             if not isinstance(result, output_model):
@@ -172,10 +214,9 @@ class LLMService:
 
         except Exception as e:
             log_error(logger, f"LLMService.invoke_structured[{output_model.__name__}]", e)
-            raise RuntimeError(
-                f"Structured LLM call failed for {output_model.__name__}: "
-                f"{type(e).__name__}: {e}"
-            ) from e
+            raise RuntimeError(llm_failure_message(
+                e, f"Structured LLM call failed for {output_model.__name__}"
+            )) from e
 
     @staticmethod
     def load_prompt(prompt_name: str) -> str:

@@ -104,7 +104,7 @@ mock_requirements = {
 }
 
 try:
-    web_str, dataset_str, sources = search_service.run_research_search(
+    web_str, dataset_str, sources, dataset_response = search_service.run_research_search(
         requirements=mock_requirements,
         max_web_results=3,
         max_dataset_results=3,
