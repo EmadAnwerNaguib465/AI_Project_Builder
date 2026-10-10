@@ -5,8 +5,8 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 type SceneProps = { active: number; complete: boolean; paused: boolean; signal: number; variant: number };
-const ACCENTS = [0xff976f, 0x99ffe1, 0xff8fbe];
-const COATINGS = [0xff7852, 0xe167a2, 0x8ac8e8];
+const ACCENTS = [0x486c59, 0x6f917f, 0x8baa98];
+const COATINGS = [0x486c59, 0x5f806d, 0x789887];
 
 export default function PipelineScene({ active, complete, paused, signal, variant }: SceneProps) {
   const mountRef = useRef<HTMLDivElement>(null);
@@ -44,10 +44,10 @@ export default function PipelineScene({ active, complete, paused, signal, varian
     scene.environmentIntensity = 1.25;
     environment.dispose();
     generator.dispose();
-    const key = new THREE.DirectionalLight(0xeafffa, 3);
+    const key = new THREE.DirectionalLight(0xffffff, 3);
     key.position.set(-3, 4, 5);
     scene.add(key);
-    const rim = new THREE.DirectionalLight(0xff8da9, 2.5);
+    const rim = new THREE.DirectionalLight(0xc5dbce, 2.5);
     rim.position.set(4, -2, 2);
     scene.add(rim);
 
@@ -72,7 +72,7 @@ export default function PipelineScene({ active, complete, paused, signal, varian
     for (const radialIndex of [3, 13]) {
       const points = Array.from({ length: 160 }, (_, index) => new THREE.Vector3().fromBufferAttribute(positions, index * 21 + radialIndex));
       const curve = new THREE.CatmullRomCurve3(points, true);
-      const seam = new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.016, 5, true), new THREE.MeshBasicMaterial({ color: 0x99ffe1 }));
+      const seam = new THREE.Mesh(new THREE.TubeGeometry(curve, 160, 0.016, 5, true), new THREE.MeshBasicMaterial({ color: 0x486c59 }));
       core.add(seam);
       seams.push(seam);
     }
@@ -80,27 +80,27 @@ export default function PipelineScene({ active, complete, paused, signal, varian
     const orbit = new THREE.Group();
     orbit.rotation.set(1.08, 0.12, -0.24);
     assembly.add(orbit);
-    const track = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.007, 4, 160), new THREE.MeshBasicMaterial({ color: 0x548e81, transparent: true, opacity: 0.55 }));
+    const track = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.007, 4, 160), new THREE.MeshBasicMaterial({ color: 0x6f917f, transparent: true, opacity: 0.55 }));
     orbit.add(track);
     const nodes: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>[] = [];
     const arcs: THREE.Mesh<THREE.TorusGeometry, THREE.MeshBasicMaterial>[] = [];
     for (let index = 0; index < 6; index++) {
       const angle = index * Math.PI / 3;
-      const arc = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.015, 4, 30, 0.54), new THREE.MeshBasicMaterial({ color: 0x99ffe1, transparent: true, opacity: 0.3 }));
+      const arc = new THREE.Mesh(new THREE.TorusGeometry(3.1, 0.015, 4, 30, 0.54), new THREE.MeshBasicMaterial({ color: 0x486c59, transparent: true, opacity: 0.3 }));
       arc.rotation.z = angle;
       orbit.add(arc);
       arcs.push(arc);
-      const node = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.33, 0.13), new THREE.MeshStandardMaterial({ color: 0xa7b4b3, metalness: 0.65, roughness: 0.24, emissive: 0x99ffe1 }));
+      const node = new THREE.Mesh(new THREE.BoxGeometry(0.13, 0.33, 0.13), new THREE.MeshStandardMaterial({ color: 0xc5cdca, metalness: 0.65, roughness: 0.24, emissive: 0x486c59 }));
       node.position.set(Math.cos(angle) * 3.1, Math.sin(angle) * 3.1, 0);
       node.rotation.z = angle;
       orbit.add(node);
       nodes.push(node);
     }
-    const outerOrbit = new THREE.Mesh(new THREE.TorusGeometry(3.35, 0.004, 4, 160), new THREE.MeshBasicMaterial({ color: 0x578478, transparent: true, opacity: 0.45 }));
+    const outerOrbit = new THREE.Mesh(new THREE.TorusGeometry(3.35, 0.004, 4, 160), new THREE.MeshBasicMaterial({ color: 0x789887, transparent: true, opacity: 0.4 }));
     outerOrbit.rotation.set(-0.65, 0.3, 0.5);
     assembly.add(outerOrbit);
 
-    const grid = new THREE.GridHelper(18, 36, 0x36534c, 0x273932);
+    const grid = new THREE.GridHelper(18, 36, 0xb8c3bd, 0xdce2de);
     grid.rotation.x = Math.PI / 2;
     grid.position.z = -4;
     grid.material.transparent = true;
@@ -110,7 +110,7 @@ export default function PipelineScene({ active, complete, paused, signal, varian
     const pointer = { x: 0, y: 0 };
     const drag = { active: false, x: 0, y: 0, rotationX: 0, rotationY: 0 };
     const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const accent = new THREE.Color(0x99ffe1);
+    const accent = new THREE.Color(0x486c59);
     const targetAccent = new THREE.Color();
     const targetCoating = new THREE.Color();
     let inView = false;

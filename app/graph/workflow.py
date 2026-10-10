@@ -37,6 +37,7 @@ Public API:
 """
 
 from typing import Callable, Generator
+from uuid import UUID
 
 from langgraph.graph import StateGraph, END
 
@@ -47,6 +48,7 @@ from app.agents.rag_agent import run_rag_agent
 from app.agents.architect_agent import run_architect_agent
 from app.agents.critic_agent import run_critic_agent, route_after_critic
 from app.agents.report_agent import run_report_agent
+from app.services.tracing import configure_langsmith, pipeline_trace_config
 from app.utils.logger import get_logger
 
 logger = get_logger(__name__)
@@ -131,7 +133,7 @@ logger.info("LangGraph workflow compiled successfully")
 # Public pipeline API
 # ---------------------------------------------------------------------------
 
-def run_pipeline(user_idea: str) -> ProjectState:
+def run_pipeline(user_idea: str, *, run_id: UUID | None = None) -> ProjectState:
     """
     Runs the complete multi-agent pipeline synchronously.
 
@@ -154,7 +156,11 @@ def run_pipeline(user_idea: str) -> ProjectState:
     state = initial_state(user_idea)
 
     try:
-        final_state: ProjectState = graph.invoke(state)
+        configure_langsmith()
+        final_state: ProjectState = graph.invoke(
+            state,
+            config=pipeline_trace_config(run_id),
+        )
         logger.info(
             f"Pipeline COMPLETE: "
             f"revision_count={final_state.get('revision_count', 0)}, "
@@ -170,6 +176,8 @@ def run_pipeline(user_idea: str) -> ProjectState:
 
 def stream_pipeline(
     user_idea: str,
+    *,
+    run_id: UUID | None = None,
 ) -> Generator[tuple[str, ProjectState], None, None]:
     """
     Runs the pipeline in streaming mode, yielding after each agent completes.
@@ -194,7 +202,12 @@ def stream_pipeline(
     state = initial_state(user_idea)
 
     try:
-        for chunk in graph.stream(state, stream_mode="updates"):
+        configure_langsmith()
+        for chunk in graph.stream(
+            state,
+            config=pipeline_trace_config(run_id),
+            stream_mode="updates",
+        ):
             # chunk is a dict: {node_name: state_update}
             for node_name, state_update in chunk.items():
                 logger.info(f"Stream: node '{node_name}' completed")

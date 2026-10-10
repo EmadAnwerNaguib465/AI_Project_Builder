@@ -33,6 +33,21 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", description="OpenAI API key for embeddings")
     tavily_api_key: str = Field(default="", description="Tavily web search API key")
 
+    # --- LangSmith Observability ---
+    langsmith_tracing: bool = Field(
+        default=False,
+        description="Enable LangSmith tracing",
+    )
+    langsmith_api_key: str = Field(default="", description="LangSmith API key")
+    langsmith_project: str = Field(
+        default="ai-project-builder",
+        description="LangSmith project name",
+    )
+    langsmith_endpoint: str = Field(
+        default="https://api.smith.langchain.com",
+        description="LangSmith API endpoint",
+    )
+
     # --- LLM Configuration ---
     llm_model: str = Field(default="gemini-3.5-flash-lite", description="Primary LLM model name")
     llm_temperature: float = Field(default=0.7, ge=0.0, le=2.0)
@@ -57,6 +72,11 @@ class Settings(BaseSettings):
     app_name: str = Field(default="AI Project Builder")
     app_version: str = Field(default="1.0.0")
     log_level: str = Field(default="INFO")
+
+    @property
+    def langsmith_enabled(self) -> bool:
+        """Return whether tracing has everything it needs to run."""
+        return self.langsmith_tracing and bool(self.langsmith_api_key.strip())
 
     @property
     def chroma_persist_path(self) -> Path:

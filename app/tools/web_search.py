@@ -15,6 +15,8 @@ Usage:
 from dataclasses import dataclass, field
 from typing import Optional
 
+from langsmith import traceable
+
 from app.config.settings import settings
 from app.utils.logger import get_logger, log_tool_call
 
@@ -63,6 +65,7 @@ class WebSearchResponse:
         return [r.url for r in self.results if r.url]
 
 
+@traceable(run_type="tool", name="tavily_web_search")
 def web_search(query: str, max_results: int = 5, include_domains: Optional[list[str]] = None) -> WebSearchResponse:
     """
     Performs a web search using the Tavily API.

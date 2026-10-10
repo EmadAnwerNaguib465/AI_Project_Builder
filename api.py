@@ -2,13 +2,16 @@
 
 import json
 from collections.abc import Iterator
+from uuid import uuid4
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 from app.config.settings import settings
+from app.graph.state import initial_state
 from app.graph.workflow import stream_pipeline
+from app.services.agent_trace import build_agent_trace_step
 from app.utils.validators import ValidationError, validate_user_idea
 
 api = FastAPI(title="AI Project Builder API", version="1.0.0")
@@ -20,24 +23,47 @@ class BuildRequest(BaseModel):
 
 @api.get("/health")
 def health() -> dict:
-    return {"ok": True, "model": settings.llm_model, "configured": bool(settings.google_api_key)}
+    return {
+        "ok": True,
+        "model": settings.llm_model,
+        "configured": bool(settings.google_api_key),
+        "langsmith_tracing": settings.langsmith_enabled,
+    }
 
 
 def events(idea: str) -> Iterator[str]:
     def emit(payload: dict) -> str:
         return json.dumps(payload, ensure_ascii=False) + "\n"
 
-    yield emit({"type": "started"})
+    trace_id = uuid4()
+    trace_state = initial_state(idea)
+    sequence = 0
+    yield emit({
+        "type": "started",
+        "trace": {
+            "id": str(trace_id),
+            "project": settings.langsmith_project,
+            "enabled": settings.langsmith_enabled,
+        },
+    })
     try:
-        for node, update in stream_pipeline(idea):
+        for node, update in stream_pipeline(idea, run_id=trace_id):
             if node.startswith("__"):
                 continue
+            sequence += 1
+            trace_step, trace_state = build_agent_trace_step(
+                node,
+                trace_state,
+                update,
+                sequence,
+            )
             yield emit({
                 "type": "step",
                 "node": node,
                 "revision_count": update.get("revision_count"),
                 "critic_status": update.get("critic_feedback", {}).get("status"),
                 "next_agent": update.get("current_agent"),
+                "trace_step": trace_step,
             })
             if node == "report":
                 report = update.get("final_report")

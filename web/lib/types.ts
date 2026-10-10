@@ -32,9 +32,25 @@ export interface ProjectReport {
   sources: string[];
 }
 
+export interface TraceSession {
+  id: string;
+  project: string;
+  enabled: boolean;
+}
+
+export interface AgentTraceStep {
+  sequence: number;
+  agent: AgentName;
+  input: Record<string, unknown>;
+  output: Record<string, unknown>;
+  handoff_to: AgentName | null;
+  next_input: Record<string, unknown>;
+  revision_count: number;
+}
+
 export type PipelineEvent =
-  | { type: "started" }
-  | { type: "step"; node: AgentName; revision_count: number | null; critic_status: "PASS" | "REVISE" | null; next_agent: string | null }
+  | { type: "started"; trace: TraceSession }
+  | { type: "step"; node: AgentName; revision_count: number | null; critic_status: "PASS" | "REVISE" | null; next_agent: string | null; trace_step: AgentTraceStep }
   | { type: "complete"; report: ProjectReport }
   | { type: "error"; message: string };
 

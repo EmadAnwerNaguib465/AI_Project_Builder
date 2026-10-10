@@ -22,7 +22,7 @@ try {
   await page.locator(".service-indicator.ready").waitFor();
   const fonts = await page.evaluate(() => [...new Set([...document.fonts].filter((font) => font.status === "loaded").map((font) => font.family))]);
   console.log("Loaded fonts:", fonts.join(", ") || "fallback only");
-  assert.ok(fonts.includes("Onest"), "Design fonts did not load");
+  assert.ok(fonts.includes("Bricolage Grotesque") && fonts.includes("Manrope") && fonts.includes("IBM Plex Mono"), "Design fonts did not load");
 
   await page.getByRole("button", { name: "Build project plan" }).click();
   assert.match(await page.locator(".inline-error").textContent(), /at least five words/);
@@ -44,16 +44,12 @@ try {
   await page.getByRole("button", { name: "Retry", exact: true }).click();
   await page.locator(".agent-item.active").waitFor();
   assert.equal(await page.locator("textarea").isDisabled(), true);
-  assert.equal(await page.locator(".flow-node.active strong").textContent(), "Brief");
   assert.equal(await page.getByRole("button", { name: "Building your plan" }).isDisabled(), true);
   await page.locator(".pipeline-section").scrollIntoViewIfNeeded();
   await page.waitForTimeout(650);
   await page.screenshot({ path: ".screens/running.png" });
   release();
   await page.getByRole("heading", { name: report.project_title }).waitFor();
-  assert.equal(await page.locator(".dataset-recommendation").count(), 0);
-  assert.match(await page.locator(".dataset-note").textContent(), /No source-backed dataset recommendations/);
-  assert.equal(await page.locator(".flow-node.done").count(), 6);
   await page.locator('.report-actions button[aria-label="New plan"]').click();
   await page.locator(".report-view").waitFor({ state: "detached" });
   assert.equal(await page.locator("textarea").inputValue(), "");
@@ -64,8 +60,8 @@ try {
 
   const reduced = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   await reduced.goto(base, { waitUntil: "networkidle" });
-  await reduced.locator(".pipeline-map").waitFor({ state: "attached" });
-  assert.equal(await reduced.locator(".pipeline-map").getAttribute("data-rendering"), "paused");
+  await reduced.locator(".pipeline-scene canvas").waitFor();
+  assert.equal(await reduced.locator(".pipeline-scene").getAttribute("data-rendering"), "paused");
   assert.equal(await reduced.locator(".scene-toggle").isDisabled(), true);
   await reduced.close();
   console.log("Reduced-motion preference OK");

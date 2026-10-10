@@ -301,6 +301,11 @@ GOOGLE_API_KEY=your_gemini_api_key_here
 OPENAI_API_KEY=your_openai_key_here        # For higher-quality embeddings
 TAVILY_API_KEY=your_tavily_key_here        # For live web search
 
+# Optional agent observability
+LANGSMITH_TRACING=true
+LANGSMITH_API_KEY=your_langsmith_api_key_here
+LANGSMITH_PROJECT=ai-project-builder
+
 # ── LLM Settings (defaults are fine) ─────────────────────
 LLM_MODEL=gemini-2.0-flash
 LLM_TEMPERATURE=0.7
@@ -316,6 +321,10 @@ MAX_REVISIONS=2
 > **Without `OPENAI_API_KEY`:** The system automatically falls back to local `sentence-transformers/all-MiniLM-L6-v2` embeddings — no quality loss for RAG, completely free.
 >
 > **Without `TAVILY_API_KEY`:** Web search is skipped; the Research Agent uses Gemini's training knowledge and HuggingFace Datasets API (still free).
+>
+> **LangSmith privacy:** Traces can include the submitted project idea, prompts,
+> model outputs, and tool results. Keep `LANGSMITH_TRACING=false` for data you do
+> not want sent to LangSmith.
 
 ---
 

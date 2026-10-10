@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from urllib.parse import urlsplit, urlunsplit
 
 import httpx
+from langsmith import traceable
 
 from app.models.dataset_models import DatasetRecommendation, DatasetSelection
 from app.tools.web_search import web_search
@@ -134,6 +135,7 @@ def _search_huggingface(query: str, max_results: int = 5) -> list[DatasetInfo]:
         return []
 
 
+@traceable(run_type="tool", name="dataset_discovery")
 def dataset_search(project_type: str, domain: str = "", max_results: int = 5,
                    project_title: str = "", objectives: list[str] | None = None) -> DatasetSearchResponse:
     limit = min(max(max_results, 1), 10)

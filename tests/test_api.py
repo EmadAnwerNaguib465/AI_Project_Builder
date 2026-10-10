@@ -8,7 +8,8 @@ import api as api_module
 def test_build_streams_steps_and_report(monkeypatch):
     monkeypatch.setattr(api_module.settings, "google_api_key", "test-key")
 
-    def pipeline(_idea):
+    def pipeline(_idea, *, run_id=None):
+        assert run_id is not None
         yield "supervisor", {"requirements": {"project_title": "Demo"}, "current_agent": "research"}
         yield "report", {"final_report": {"project_title": "Demo"}, "current_agent": "done"}
 
@@ -17,13 +18,17 @@ def test_build_streams_steps_and_report(monkeypatch):
     messages = [json.loads(line) for line in response.text.splitlines()]
     assert response.status_code == 200
     assert [message["type"] for message in messages] == ["started", "step", "step", "complete"]
+    assert messages[0]["trace"]["id"]
+    assert messages[1]["trace_step"]["output"]["requirements"]["project_title"] == "Demo"
+    assert messages[1]["trace_step"]["handoff_to"] == "research"
+    assert messages[1]["trace_step"]["next_input"]["requirements"]["project_title"] == "Demo"
     assert messages[-1]["report"]["project_title"] == "Demo"
 
 
 def test_build_reports_agent_error(monkeypatch):
     monkeypatch.setattr(api_module.settings, "google_api_key", "test-key")
 
-    def pipeline(_idea):
+    def pipeline(_idea, *, run_id=None):
         raise RuntimeError("supervisor: Model unavailable")
         yield
 

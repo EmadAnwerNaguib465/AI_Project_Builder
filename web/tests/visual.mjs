@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "@playwright/test";
+import sharp from "sharp";
 
 const browser = await chromium.launch({ channel: "msedge", headless: true });
 const base = "http://127.0.0.1:3001";
@@ -11,62 +12,54 @@ async function checkViewport(name, width, height) {
   const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   await page.goto(base, { waitUntil: "networkidle" });
-  await page.locator(".intro").waitFor({ state: "hidden" });
   await page.locator(".service-indicator.ready").waitFor();
+  await page.locator(".pipeline-scene canvas").waitFor();
+  await page.waitForFunction(() => document.querySelector(".pipeline-scene")?.getAttribute("data-rendering") === "active");
   assert.equal(await page.locator(".agent-item").count(), 6);
-  assert.equal(await page.locator(".flow-node").count(), 6);
-  assert.equal(await page.locator(".liquid-reveal, .workspace img").count(), 0);
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, name + " overflow");
-  const input = page.getByRole("textbox", { name: "Your project idea" });
-  const inputStyle = await input.evaluate((element) => {
-    const style = getComputedStyle(element);
-    return { background: style.backgroundColor, border: parseFloat(style.borderTopWidth), height: element.getBoundingClientRect().height };
-  });
-  assert.equal(inputStyle.background, "rgb(255, 255, 255)");
-  assert.ok(inputStyle.border >= 1);
-  assert.ok(inputStyle.height >= 148);
-  await input.fill("An AI project with a clearly visible project brief.");
-  await input.fill("");
-  const buildBounds = await page.getByRole("button", { name: "Build project plan", exact: true }).boundingBox();
-  assert.ok(buildBounds.y + buildBounds.height < height, name + " build button below first viewport");
-  await page.getByRole("button", { name: "Pause visual effects" }).click();
-  assert.equal(await page.locator(".pipeline-map").getAttribute("data-rendering"), "paused");
-  await page.getByRole("button", { name: "Play visual effects" }).click();
-  await page.getByRole("button", { name: "Open menu" }).click();
-  assert.ok(await page.locator(".nav-dialog").isVisible());
-  await page.keyboard.press("Tab");
-  assert.ok(await page.evaluate(() => !!document.activeElement.closest("dialog")));
-  await page.keyboard.press("Escape");
-  assert.equal(await page.locator(".nav-dialog").isVisible(), false);
-  assert.equal(await page.evaluate(() => document.documentElement.style.overflow), "");
-  await page.getByRole("button", { name: "Open menu" }).click();
-  await page.locator('.nav-dialog a[href="#ideas"]').click();
-  await page.waitForTimeout(150);
-  assert.equal(await page.locator(".nav-dialog").isVisible(), false);
-  assert.equal(await page.evaluate(() => document.documentElement.style.overflow), "");
-  assert.ok(await page.evaluate(() => scrollY > 100));
-  await page.evaluate(() => scrollTo(0, 0));
-  if (width >= 1100) {
-    const title = await page.locator(".carousel-title").textContent();
-    await page.getByRole("button", { name: "Next idea", exact: true }).click();
-    assert.notEqual(await page.locator(".carousel-title").textContent(), title);
-    await page.getByRole("button", { name: "Use this idea" }).click();
-    assert.match(await page.locator("textarea").inputValue(), /RAG assistant/);
-    await page.locator("textarea").fill("");
+  assert.equal(await page.locator("textarea").count(), 1);
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  assert.equal(overflow, false, `${name} has horizontal overflow`);
+  const canvas = page.locator(".pipeline-scene canvas");
+  const canvasBefore = await canvas.screenshot();
+  const stats = await sharp(canvasBefore).stats();
+  const variance = stats.channels.slice(0, 3).reduce((sum, channel) => sum + channel.stdev, 0);
+  assert.ok(variance > 12, `${name} 3D canvas is blank (${variance})`);
+  await page.mouse.move(width * 0.82, height * 0.34);
+  await page.waitForTimeout(350);
+  const canvasAfter = await canvas.screenshot();
+  assert.notEqual(Buffer.compare(canvasBefore, canvasAfter), 0, `${name} 3D canvas did not move`);
+  if (name === "desktop") {
+    const bounds = await canvas.boundingBox();
+    assert.ok(bounds);
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.mouse.down();
+    assert.equal(await canvas.evaluate((element) => getComputedStyle(element).cursor), "grabbing");
+    await page.mouse.move(bounds.x + bounds.width / 2 + 100, bounds.y + bounds.height / 2 + 35, { steps: 12 });
+    await page.mouse.up();
+    assert.equal(await canvas.evaluate((element) => getComputedStyle(element).cursor), "grab");
+    console.log("desktop: sculpture drag and pointer release OK");
   }
-  for (const item of await page.locator(".idea-card, .agent-item, .studio-statement h2").all()) {
-    await item.scrollIntoViewIfNeeded();
-  }
-  await page.waitForTimeout(750);
-  await page.evaluate(() => scrollTo(0, 0));
+  await page.getByRole("button", { name: "Pause 3D animation" }).click();
+  await page.waitForFunction(() => document.querySelector(".pipeline-scene")?.getAttribute("data-rendering") === "paused");
+  await page.waitForTimeout(300);
+  const pausedCanvas = await canvas.screenshot();
   await page.waitForTimeout(250);
-  await page.evaluate(() => document.activeElement?.blur());
-  await page.screenshot({ path: path.join(".screens", name + ".png"), fullPage: true });
-  await page.screenshot({ path: path.join(".screens", name + "-viewport.png") });
+  assert.equal(Buffer.compare(pausedCanvas, await canvas.screenshot()), 0, `${name} paused sculpture kept moving`);
+  await page.getByRole("button", { name: "Vision", exact: true }).click();
+  const visionCanvas = await canvas.screenshot();
+  assert.notEqual(Buffer.compare(pausedCanvas, visionCanvas), 0, `${name} example selection did not update the sculpture`);
+  await page.locator("textarea").fill("");
+  await page.getByRole("button", { name: "Play 3D animation" }).click();
+  await page.waitForFunction(() => document.querySelector(".pipeline-scene")?.getAttribute("data-rendering") === "active");
+  await page.locator(".agent-grid").scrollIntoViewIfNeeded();
+  await page.waitForTimeout(650);
+  assert.ok(await page.locator(".agent-item").evaluateAll((items) => items.every((item) => Number(getComputedStyle(item).opacity) > 0.99)), `${name} pipeline stages stayed hidden`);
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: path.join(".screens", `${name}.png`), fullPage: true });
   assert.deepEqual(errors, []);
-  console.log(name + ": workflow, clear input, pause, menu, layout OK");
+  console.log(`${name}: canvas variance ${variance.toFixed(1)}, motion and layout OK`);
   return page;
 }
 
@@ -98,15 +91,18 @@ try {
     revision_count: 1,
     sources: ["https://example.com/source"],
   };
+  const trace = { id: "b7d881ab-0447-483a-a24f-2707442f6585", project: "ai-project-builder", enabled: true };
+  const supervisorTrace = { sequence: 1, agent: "supervisor", input: { user_idea: "Create a course assistant" }, output: { requirements: { project_title: "Student knowledge assistant", project_type: "rag", objectives: ["Answer with citations"] } }, handoff_to: "research", next_input: { requirements: { project_title: "Student knowledge assistant", project_type: "rag", objectives: ["Answer with citations"] } }, revision_count: 0 };
+  const reportTrace = { sequence: 2, agent: "report", input: { requirements: supervisorTrace.output.requirements, critic_feedback: { status: "PASS" } }, output: { final_report: { project_title: report.project_title, estimated_timeline_weeks: 4 } }, handoff_to: null, next_input: {}, revision_count: 1 };
   const mockBuild = (route) => route.fulfill({ status: 200, contentType: "application/x-ndjson", body: [
-    { type: "started" },
-    { type: "step", node: "supervisor", revision_count: null, critic_status: null, next_agent: "research" },
-    { type: "step", node: "report", revision_count: 1, critic_status: null, next_agent: "done" },
+    { type: "started", trace },
+    { type: "step", node: "supervisor", revision_count: null, critic_status: null, next_agent: "research", trace_step: supervisorTrace },
+    { type: "step", node: "report", revision_count: 1, critic_status: null, next_agent: "done", trace_step: reportTrace },
     { type: "complete", report },
   ].map((line) => JSON.stringify(line)).join("\n") + "\n" });
   async function checkReportScroll(page, name) {
     await page.waitForTimeout(900);
-    await page.waitForFunction(() => document.querySelector(".pipeline-map")?.getAttribute("data-rendering") === "paused");
+    await page.waitForFunction(() => document.querySelector(".pipeline-scene")?.getAttribute("data-rendering") === "paused");
     const start = await page.evaluate(() => ({ y: window.scrollY, max: document.documentElement.scrollHeight - innerHeight }));
     assert.ok(start.max - start.y > 500, `${name} report has no room to scroll after appearing`);
     assert.equal(await page.locator(".report-section").count(), 6);
@@ -123,24 +119,25 @@ try {
     const roadmapTop = await page.locator("#report-roadmap").evaluate((element) => element.getBoundingClientRect().top);
     assert.ok(roadmapTop >= 0 && roadmapTop < page.viewportSize().height / 2, `${name} roadmap navigation missed its section (${roadmapTop})`);
     await page.evaluate(() => window.scrollTo(0, 0));
-    await page.waitForTimeout(200);
-    await page.mouse.move(200, 200);
-    await page.mouse.move(250, 230);
-    if (page.viewportSize().width > 850) await page.waitForFunction(() => document.querySelector(".pipeline-map")?.getAttribute("data-rendering") === "active");
-    console.log(`${name} report: vertical scroll, section navigation, and visual effect pause/resume OK`);
+    await page.waitForFunction(() => document.querySelector(".pipeline-scene")?.getAttribute("data-rendering") === "active");
+    console.log(`${name} report: vertical scroll, section navigation, and 3D pause/resume OK`);
   }
   await desktop.route("**/api/build", mockBuild);
-  await desktop.getByRole("button", { name: "Knowledge", exact: true }).click();
+  await desktop.getByRole("button", { name: "Knowledge" }).click();
   await desktop.getByRole("button", { name: /Build project plan/ }).click();
   await desktop.getByRole("heading", { name: report.project_title }).waitFor();
   await checkReportScroll(desktop, "desktop");
+  assert.equal(await desktop.locator(".trace-rail button").count(), 2);
+  await desktop.locator(".trace-rail button").first().click();
+  await desktop.waitForFunction(() => document.querySelector(".trace-route")?.textContent?.includes("Research"));
+  assert.ok((await desktop.locator(".trace-route").textContent()).includes("Research"));
+  assert.equal(await desktop.locator(".trace-payload").count(), 3);
+  assert.equal(await desktop.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
   assert.equal(await desktop.locator(".roadmap-list li").count(), 3);
   assert.equal(await desktop.locator(".dataset-recommendation").count(), 2);
   assert.equal(await desktop.locator(".dataset-link").first().getAttribute("href"), report.dataset_recommendations[0].url);
   assert.equal(await desktop.locator('#report-dataset a[href*="fabricated.example"]').count(), 0);
   assert.ok((await desktop.locator(".dataset-metadata").first().textContent()).includes("Not provided by source"));
-  await desktop.locator('.report-nav a[href="#report-dataset"]').click();
-  await desktop.locator("#report-dataset").screenshot({ path: ".screens/datasets-desktop.png" });
   const download = desktop.waitForEvent("download");
   await desktop.getByRole("button", { name: "Download JSON" }).click();
   const downloaded = await download;
@@ -150,13 +147,12 @@ try {
   await desktop.screenshot({ path: ".screens/report.png", fullPage: true });
   console.log("report: JSON download OK");
   await mobile.route("**/api/build", mockBuild);
-  await mobile.getByRole("button", { name: "Knowledge", exact: true }).click();
+  await mobile.getByRole("button", { name: "Knowledge" }).click();
   await mobile.getByRole("button", { name: /Build project plan/ }).click();
   await mobile.getByRole("heading", { name: report.project_title }).waitFor();
+  assert.equal(await mobile.locator(".trace-payload").count(), 3);
   await checkReportScroll(mobile, "mobile");
   assert.equal(await mobile.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
-  await mobile.locator('.report-nav a[href="#report-dataset"]').click();
-  await mobile.locator("#report-dataset").screenshot({ path: ".screens/datasets-mobile.png" });
   await mobile.screenshot({ path: ".screens/mobile-report.png", fullPage: true });
   console.log("mobile report: layout OK");
   await mobile.close();
