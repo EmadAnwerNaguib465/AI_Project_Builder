@@ -20,6 +20,7 @@ Usage:
 """
 
 import os
+import time
 from pathlib import Path
 from typing import Type, TypeVar, Optional
 from pydantic import BaseModel
@@ -30,6 +31,18 @@ from langchain_core.runnables import Runnable
 
 from app.config.settings import settings
 from app.utils.logger import get_logger, log_error
+
+# Transient errors that should trigger a retry
+_RETRYABLE_ERRORS = (
+    "SSL",
+    "EOF",
+    "ConnectError",
+    "RemoteDisconnected",
+    "overloaded",
+    "503",
+    "429",
+    "RESOURCE_EXHAUSTED",
+)
 
 logger = get_logger(__name__)
 
@@ -75,6 +88,8 @@ class LLMService:
                 temperature=settings.llm_temperature,
                 max_output_tokens=settings.llm_max_tokens,
                 convert_system_message_to_human=False,
+                request_timeout=120,
+                max_retries=3,
             )
             logger.info(f"LLM initialized: {settings.llm_model}")
 
@@ -113,20 +128,33 @@ class LLMService:
         Raises:
             RuntimeError: On LLM call failure after logging the error.
         """
-        try:
-            llm = self._get_llm()
+        last_exc = None
+        for attempt in range(1, 4):  # 3 attempts
+            try:
+                llm = self._get_llm()
 
-            messages = []
-            if system_prompt:
-                messages.append(SystemMessage(content=system_prompt))
-            messages.append(HumanMessage(content=user_prompt))
+                messages = []
+                if system_prompt:
+                    messages.append(SystemMessage(content=system_prompt))
+                messages.append(HumanMessage(content=user_prompt))
 
-            response = llm.invoke(messages)
-            return response.content
+                response = llm.invoke(messages)
+                return response.content
 
-        except Exception as e:
-            log_error(logger, "LLMService.invoke", e)
-            raise RuntimeError(f"LLM call failed: {type(e).__name__}: {e}") from e
+            except Exception as e:
+                last_exc = e
+                err_str = str(e)
+                is_retryable = any(token in err_str for token in _RETRYABLE_ERRORS)
+                if is_retryable and attempt < 3:
+                    wait = attempt * 15  # 15s, 30s
+                    logger.info(f"[RETRY] attempt {attempt}/3 — waiting {wait}s ({type(e).__name__})")
+                    time.sleep(wait)
+                    self._llm = None  # force re-init
+                    continue
+                break
+
+        log_error(logger, "LLMService.invoke", last_exc)
+        raise RuntimeError(f"LLM call failed: {type(last_exc).__name__}: {last_exc}") from last_exc
 
     def invoke_structured(
         self,
@@ -149,30 +177,43 @@ class LLMService:
         Raises:
             RuntimeError: If the LLM call or Pydantic validation fails.
         """
-        try:
-            structured_llm = self.get_structured_llm(output_model)
+        last_exc = None
+        for attempt in range(1, 4):  # 3 attempts
+            try:
+                structured_llm = self.get_structured_llm(output_model)
 
-            messages = []
-            if system_prompt:
-                messages.append(SystemMessage(content=system_prompt))
-            messages.append(HumanMessage(content=user_prompt))
+                messages = []
+                if system_prompt:
+                    messages.append(SystemMessage(content=system_prompt))
+                messages.append(HumanMessage(content=user_prompt))
 
-            result = structured_llm.invoke(messages)
+                result = structured_llm.invoke(messages)
 
-            # Validate the returned object is actually the right type
-            if not isinstance(result, output_model):
-                raise ValueError(
-                    f"LLM returned {type(result).__name__}, expected {output_model.__name__}"
-                )
+                # Validate the returned object is actually the right type
+                if not isinstance(result, output_model):
+                    raise ValueError(
+                        f"LLM returned {type(result).__name__}, expected {output_model.__name__}"
+                    )
 
-            return result
+                return result
 
-        except Exception as e:
-            log_error(logger, f"LLMService.invoke_structured[{output_model.__name__}]", e)
-            raise RuntimeError(
-                f"Structured LLM call failed for {output_model.__name__}: "
-                f"{type(e).__name__}: {e}"
-            ) from e
+            except Exception as e:
+                last_exc = e
+                err_str = str(e)
+                is_retryable = any(token in err_str for token in _RETRYABLE_ERRORS)
+                if is_retryable and attempt < 3:
+                    wait = attempt * 15  # 15s, 30s
+                    logger.info(f"[RETRY] structured attempt {attempt}/3 — waiting {wait}s ({type(e).__name__})")
+                    time.sleep(wait)
+                    self._llm = None  # force re-init
+                    continue
+                break
+
+        log_error(logger, f"LLMService.invoke_structured[{output_model.__name__}]", last_exc)
+        raise RuntimeError(
+            f"Structured LLM call failed for {output_model.__name__}: "
+            f"{type(last_exc).__name__}: {last_exc}"
+        ) from last_exc
 
     @staticmethod
     def load_prompt(prompt_name: str) -> str:

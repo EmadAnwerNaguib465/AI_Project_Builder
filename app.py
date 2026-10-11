@@ -489,7 +489,7 @@ elif st.session_state.pipeline_state == "running":
             # Update UI
             step_placeholder.markdown(render_steps(next_agent, done), unsafe_allow_html=True)
             progress = int((len(done) / len(AGENTS)) * 100)
-            agent_display = dict(AGENTS).get(node_name, ("", node_name, ""))[1] if node_name in dict(a[0] for a in AGENTS) else node_name
+            agent_display = {a[0]: a[2] for a in AGENTS}.get(node_name, node_name)
             progress_bar.progress(progress, text=f"Completed: {node_name} ({progress}%)")
 
         # All done
