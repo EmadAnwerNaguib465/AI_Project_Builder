@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     google_api_key: str = Field(default="", description="Google Gemini API key")
     openai_api_key: str = Field(default="", description="OpenAI API key for embeddings")
     tavily_api_key: str = Field(default="", description="Tavily web search API key")
+    langsmith_tracing: bool = Field(default=False, description="Enable LangSmith tracing")
+    langsmith_api_key: str = Field(default="", description="LangSmith API key")
+    langsmith_project: str = Field(default="planorai", description="LangSmith project name")
+    langsmith_endpoint: str = Field(default="https://api.smith.langchain.com", description="LangSmith API endpoint")
 
     # --- LLM Configuration ---
     llm_model: str = Field(default="gemini-2.5-flash", description="Primary LLM model name")
@@ -51,6 +55,11 @@ class Settings(BaseSettings):
 
     # --- Graph Configuration ---
     max_revisions: int = Field(default=2, ge=0)
+
+    @property
+    def langsmith_enabled(self) -> bool:
+        """Tracing is enabled only when requested and configured with a key."""
+        return self.langsmith_tracing and bool(self.langsmith_api_key.strip())
 
     # --- Application ---
     app_name: str = Field(default="Planorai")

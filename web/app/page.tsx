@@ -5,9 +5,8 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowRight, ArrowUp, ArrowUpRight, Boxes, Check, CircleHelp, FileCheck2, FileText, Layers3, LoaderCircle, Pause, Play, RotateCcw, ScanEye, ScanSearch, ShieldCheck, Sparkles, TrendingUp } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import AgentTrace from "@/components/agent-trace";
 import ReportView from "@/components/report-view";
-import { AGENTS, type AgentName, type AgentTraceStep, type PipelineEvent, type ProjectReport, type TraceSession } from "@/lib/types";
+import { AGENTS, type AgentName, type PipelineEvent, type ProjectReport } from "@/lib/types";
 
 const PipelineScene = dynamic(() => import("@/components/pipeline-scene"), { ssr: false });
 const EXAMPLES = [
@@ -31,8 +30,6 @@ export default function StudioPage() {
   const [report, setReport] = useState<ProjectReport | null>(null);
   const [error, setError] = useState("");
   const [revisions, setRevisions] = useState(0);
-  const [trace, setTrace] = useState<TraceSession | null>(null);
-  const [traceSteps, setTraceSteps] = useState<AgentTraceStep[]>([]);
   const [scenePaused, setScenePaused] = useState(false);
   const [service, setService] = useState<"checking" | "ready" | "offline">("checking");
   const controllerRef = useRef<AbortController | null>(null);
@@ -60,18 +57,14 @@ export default function StudioPage() {
     setReport(null);
     setError("");
     setRevisions(0);
-    setTrace(null);
-    setTraceSteps([]);
     window.scrollTo({ top: 0, behavior: reduceMotion ? "instant" : "smooth" });
   };
 
   const handleEvent = (event: PipelineEvent) => {
     if (event.type === "started") {
-      setTrace(event.trace);
-      setTraceSteps([]);
+      setCurrent("supervisor");
     } else if (event.type === "step") {
       setCompleted((previous) => previous.includes(event.node) ? previous : [...previous, event.node]);
-      setTraceSteps((previous) => [...previous, event.trace_step]);
       if (event.revision_count !== null) setRevisions(event.revision_count);
       const next = event.next_agent as AgentName | null;
       if (event.critic_status === "REVISE") {
@@ -103,8 +96,6 @@ export default function StudioPage() {
     setError("");
     setReport(null);
     setCompleted([]);
-    setTrace(null);
-    setTraceSteps([]);
     setCurrent("supervisor");
     setRevisions(0);
 
@@ -155,7 +146,7 @@ export default function StudioPage() {
   return <main className="app-shell" data-motion={scenePaused || reduceMotion ? "paused" : "active"} data-mode={mode}>
     <header className="topbar">
       <a className="brand" href="#workspace" aria-label="Planorai workspace"><Image src="/logo-transparent.png" alt="Planorai" width={140} height={38} priority className="brand-logo" style={{ width: "auto", height: "38px" }} /></a>
-      <nav className="top-nav" aria-label="Workspace navigation"><a href="#workspace">Workspace <ArrowUpRight size={13} /></a><a href="#pipeline">Pipeline</a>{trace && <a href="#trace">Trace</a>}{report && <a href="#blueprint">Blueprint</a>}</nav>
+      <nav className="top-nav" aria-label="Workspace navigation"><a href="#workspace">Workspace <ArrowUpRight size={13} /></a><a href="#pipeline">Pipeline</a>{report && <a href="#blueprint">Blueprint</a>}</nav>
       <div className="top-actions"><span className={`service-indicator ${service}`}><i />{service === "checking" ? "Connecting" : service === "ready" ? "System ready" : "Service offline"}</span>{mode === "complete" && <button type="button" className="new-plan" title="New plan" aria-label="New plan" onClick={reset}><RotateCcw size={17} /></button>}</div>
     </header>
 
@@ -195,7 +186,6 @@ export default function StudioPage() {
         <div className="progress-track" role="progressbar" aria-label="Project plan progress" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progress}%` }} /></div>
         <div className="agent-grid">{AGENTS.map((agent, index) => { const done = completed.includes(agent.id) || mode === "complete"; const active = mode === "running" && current === agent.id; const Icon = AGENT_ICONS[index]; return <motion.div key={agent.id} className={`agent-item ${done ? "done" : ""} ${active ? "active" : ""}`} initial={reduceMotion ? false : { opacity: 0, y: 12 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: 0.2 }} transition={{ duration: 0.3, delay: index * 0.05 }}><div className="agent-topline"><span>{String(index + 1).padStart(2, "0")}</span><ArrowRight size={15} /></div><div className="agent-icon">{done ? <Check size={27} /> : <Icon size={27} strokeWidth={1.5} />}</div><strong>{agent.label}</strong><span className="agent-detail">{agent.detail}</span><span className="agent-state">{active && <LoaderCircle size={11} className="spin" />}{done ? "DONE" : active ? "WORKING" : "QUEUED"}</span></motion.div>; })}</div>
         {revisions > 0 && <p className="revision-note"><RotateCcw size={12} /> Review cycle {revisions} {mode === "complete" ? "completed." : "in progress."}</p>}
-        {trace && <AgentTrace trace={trace} steps={traceSteps} mode={mode} />}
       </div>
     </section>
 

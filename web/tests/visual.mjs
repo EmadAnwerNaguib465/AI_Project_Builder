@@ -91,13 +91,10 @@ try {
     revision_count: 1,
     sources: ["https://example.com/source"],
   };
-  const trace = { id: "b7d881ab-0447-483a-a24f-2707442f6585", project: "planorai", enabled: true };
-  const supervisorTrace = { sequence: 1, agent: "supervisor", input: { user_idea: "Create a course assistant" }, output: { requirements: { project_title: "Student knowledge assistant", project_type: "rag", objectives: ["Answer with citations"] } }, handoff_to: "research", next_input: { requirements: { project_title: "Student knowledge assistant", project_type: "rag", objectives: ["Answer with citations"] } }, revision_count: 0 };
-  const reportTrace = { sequence: 2, agent: "report", input: { requirements: supervisorTrace.output.requirements, critic_feedback: { status: "PASS" } }, output: { final_report: { project_title: report.project_title, estimated_timeline_weeks: 4 } }, handoff_to: null, next_input: {}, revision_count: 1 };
   const mockBuild = (route) => route.fulfill({ status: 200, contentType: "application/x-ndjson", body: [
-    { type: "started", trace },
-    { type: "step", node: "supervisor", revision_count: null, critic_status: null, next_agent: "research", trace_step: supervisorTrace },
-    { type: "step", node: "report", revision_count: 1, critic_status: null, next_agent: "done", trace_step: reportTrace },
+    { type: "started" },
+    { type: "step", node: "supervisor", revision_count: null, critic_status: null, next_agent: "research" },
+    { type: "step", node: "report", revision_count: 1, critic_status: null, next_agent: "done" },
     { type: "complete", report },
   ].map((line) => JSON.stringify(line)).join("\n") + "\n" });
   async function checkReportScroll(page, name) {
@@ -127,11 +124,7 @@ try {
   await desktop.getByRole("button", { name: /Build project plan/ }).click();
   await desktop.getByRole("heading", { name: report.project_title }).waitFor();
   await checkReportScroll(desktop, "desktop");
-  assert.equal(await desktop.locator(".trace-rail button").count(), 2);
-  await desktop.locator(".trace-rail button").first().click();
-  await desktop.waitForFunction(() => document.querySelector(".trace-route")?.textContent?.includes("Research"));
-  assert.ok((await desktop.locator(".trace-route").textContent()).includes("Research"));
-  assert.equal(await desktop.locator(".trace-payload").count(), 3);
+  assert.equal(await desktop.locator("#trace, .trace-payload").count(), 0);
   assert.equal(await desktop.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
   assert.equal(await desktop.locator(".roadmap-list li").count(), 3);
   assert.equal(await desktop.locator(".dataset-recommendation").count(), 2);
@@ -150,7 +143,7 @@ try {
   await mobile.getByRole("button", { name: "Knowledge" }).click();
   await mobile.getByRole("button", { name: /Build project plan/ }).click();
   await mobile.getByRole("heading", { name: report.project_title }).waitFor();
-  assert.equal(await mobile.locator(".trace-payload").count(), 3);
+  assert.equal(await mobile.locator("#trace, .trace-payload").count(), 0);
   await checkReportScroll(mobile, "mobile");
   assert.equal(await mobile.evaluate(() => document.documentElement.scrollWidth > window.innerWidth), false);
   await mobile.screenshot({ path: ".screens/mobile-report.png", fullPage: true });

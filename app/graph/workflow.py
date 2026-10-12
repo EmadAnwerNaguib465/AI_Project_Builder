@@ -37,6 +37,7 @@ Public API:
 """
 
 from typing import Generator
+from uuid import UUID
 
 from langgraph.graph import StateGraph, END
 
@@ -48,6 +49,7 @@ from app.agents.architect_agent import run_architect_agent
 from app.agents.critic_agent import run_critic_agent, route_after_critic
 from app.agents.report_agent import run_report_agent
 from app.utils.logger import get_logger
+from app.services.tracing import configure_langsmith, pipeline_trace_config
 
 logger = get_logger(__name__)
 
@@ -158,6 +160,7 @@ def run_pipeline(user_idea: str) -> ProjectState:
 
 def stream_pipeline(
     user_idea: str,
+    run_id: UUID | None = None,
 ) -> Generator[tuple[str, ProjectState], None, None]:
     """
     Runs the pipeline in streaming mode, yielding after each agent completes.
@@ -182,7 +185,9 @@ def stream_pipeline(
     state = initial_state(user_idea)
 
     try:
-        for chunk in graph.stream(state, stream_mode="updates"):
+        configure_langsmith()
+        trace_config = pipeline_trace_config(run_id)
+        for chunk in graph.stream(state, stream_mode="updates", config=trace_config):
             # chunk is a dict: {node_name: state_update}
             for node_name, state_update in chunk.items():
                 logger.info(f"Stream: node '{node_name}' completed")

@@ -42,15 +42,9 @@ def events(idea: str) -> Iterator[str]:
 
     trace_id = uuid4()
     trace_state = initial_state(idea)
+    trace_steps: list[dict] = []
     sequence = 0
-    yield emit({
-        "type": "started",
-        "trace": {
-            "id": str(trace_id),
-            "project": settings.langsmith_project,
-            "enabled": settings.langsmith_enabled,
-        },
-    })
+    yield emit({"type": "started"})
     try:
         for node, update in stream_pipeline(idea, run_id=trace_id):
             if node.startswith("__"):
@@ -62,13 +56,13 @@ def events(idea: str) -> Iterator[str]:
                 update,
                 sequence,
             )
+            trace_steps.append(trace_step)
             yield emit({
                 "type": "step",
                 "node": node,
                 "revision_count": update.get("revision_count"),
                 "critic_status": update.get("critic_feedback", {}).get("status"),
                 "next_agent": update.get("current_agent"),
-                "trace_step": trace_step,
             })
             if node == "report":
                 report = update.get("final_report")

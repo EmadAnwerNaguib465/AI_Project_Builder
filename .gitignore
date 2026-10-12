@@ -57,3 +57,7 @@ out/
 
 # --- Generated files ---
 web/coverage/
+
+# The Next.js API route is intentionally named /api/build.
+!web/app/api/build/
+!web/app/api/build/route.ts
