@@ -217,16 +217,14 @@ AI_Project_Builder/
 ├── scripts/
 │   └── ingest_documents.py         # CLI: embed knowledge base into ChromaDB
 │
-└── tests/
-    ├── verify_imports.py
-    ├── verify_milestone2.py        # Pydantic models
-    ├── verify_milestone3.py        # LLM service + prompts
-    ├── verify_milestone4.py        # Supervisor agent
-    ├── verify_milestone5.py        # Tools + search
-    ├── verify_milestone6.py        # Research agent
-    ├── verify_milestone7.py        # Full RAG pipeline
-    ├── verify_milestones8_10.py    # Architect, Critic, Report
-    └── verify_milestone11.py       # LangGraph workflow
+├── tests/
+│   ├── sample_report.json
+│   ├── test_agents.py
+│   ├── test_graph.py
+│   ├── test_langsmith_tracing.py
+│   ├── test_rag.py
+│   ├── test_tools.py
+│   └── verify_imports.py
 ```
 
 ---
