@@ -1,7 +1,7 @@
 """
 app/graph/state.py
 
-LangGraph shared state definition for the AI Project Builder multi-agent system.
+LangGraph shared state definition for the Planorai multi-agent system.
 
 This TypedDict is the SINGLE source of truth passed between all agents.
 Each agent reads only the fields it needs and writes only its own output fields.

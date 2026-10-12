@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     max_revisions: int = Field(default=2, ge=0)
 
     # --- Application ---
-    app_name: str = Field(default="AI Project Builder")
+    app_name: str = Field(default="Planorai")
     app_version: str = Field(default="1.0.0")
     log_level: str = Field(default="INFO")
 

@@ -1,7 +1,7 @@
 """
 app/services/llm_service.py
 
-Central LLM abstraction for the AI Project Builder.
+Central LLM abstraction for Planorai.
 All agents use this service — never instantiate LLMs directly in agent files.
 
 Primary provider: Google Gemini (gemini-2.0-flash)

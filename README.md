@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🤖 AI Project Builder
+<img src="./Logo.png" alt="Planorai Logo" width="460" />
+
+# 🤖 Planorai
 
 ### Multi-Agent AI Project Planning System
 
@@ -39,7 +41,7 @@
 
 ## 🎯 Overview
 
-**AI Project Builder** is a production-grade multi-agent system that accepts a natural language description of an AI project idea and autonomously generates a comprehensive technical project plan.
+**Planorai** is a production-grade multi-agent system that accepts a natural language description of an AI project idea and autonomously generates a comprehensive technical project plan.
 
 The system demonstrates real-world applications of:
 

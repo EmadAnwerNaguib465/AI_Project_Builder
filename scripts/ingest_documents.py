@@ -63,7 +63,7 @@ def main():
     args = parser.parse_args()
 
     print("=" * 60)
-    print("  AI Project Builder — Knowledge Base Ingestion")
+    print("  Planorai — Knowledge Base Ingestion")
     print("=" * 60)
     print(f"\n  Knowledge Base: {settings.knowledge_base_path}")
     print(f"  ChromaDB:       {settings.chroma_persist_path}")

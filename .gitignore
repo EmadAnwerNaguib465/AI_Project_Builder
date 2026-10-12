@@ -48,3 +48,12 @@ evaluation/evaluation_results.json
 # --- OS ---
 Thumbs.db
 desktop.ini
+
+# --- Node.js / Next.js ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# --- Generated files ---
+web/coverage/

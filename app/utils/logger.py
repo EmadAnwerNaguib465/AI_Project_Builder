@@ -1,7 +1,7 @@
 """
 app/utils/logger.py
 
-Centralized structured logging for the AI Project Builder.
+Centralized structured logging for Planorai.
 Provides a single `get_logger(name)` factory used by all modules.
 Logs agent lifecycle events, tool calls, routing decisions, and errors.
 Never logs API keys or sensitive data.

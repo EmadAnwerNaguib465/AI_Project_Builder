@@ -1,0 +1,59 @@
+{
+  "project_title": "Student Knowledge Assistant",
+  "executive_summary": "A grounded AI assistant for university course documents, helping students query lectures, slides, and syllabus with high precision citations.",
+  "objectives": [
+    "Answer course questions accurately with citations from lecture PDFs",
+    "Ensure sub-second search and answer latency for classroom use",
+    "Operate within a restricted GPU/hosting budget"
+  ],
+  "technical_architecture": "## System Architecture\n\nThe architecture relies on a modern RAG pipeline:\n- **Ingestion**: PDFs parsed using PyPDFium2 and chunked with RecursiveCharacterTextSplitter.\n- **Embedding**: Dense embeddings generated using text-embedding-3-small.\n- **Vector Store**: ChromaDB running locally for metadata-filtered retrieval.\n- **Orchestration**: LangGraph state graph routing user queries with feedback loops.",
+  "dataset_plan": "Collect official lecture slides and course notes. Cross-reference with standard benchmarks.",
+  "dataset_discovery_note": "Recommended datasets sourced from Hugging Face and academic archives.",
+  "dataset_recommendations": [
+    {
+      "name": "rajpurkar/squad",
+      "url": "https://huggingface.co/datasets/rajpurkar/squad",
+      "provider": "Hugging Face",
+      "description": "Stanford Question Answering Dataset benchmark for reading comprehension.",
+      "relevance": "Used to validate question-answering capabilities before deploying course materials.",
+      "discovery_source": "Hugging Face API",
+      "data_type": "text",
+      "size": "35MB",
+      "license": "CC BY-SA 4.0",
+      "access": "Open"
+    }
+  ],
+  "model_plan": "Deploy Gemini 2.0 Flash or gemini-3.5-flash-lite as the generation LLM, paired with local ChromaDB vectors.",
+  "implementation_roadmap": [
+    "Phase 1: Ingest course syllabus and slide decks into ChromaDB",
+    "Phase 2: Build FastAPI endpoints for semantic search and question answering",
+    "Phase 3: Deploy Next.js student portal and test grounding accuracy"
+  ],
+  "risks_and_mitigations": [
+    "Hallucination on technical formulas: Mitigate with strict citation thresholds and prompt guardrails",
+    "Outdated course material: Implement scheduled re-indexing when professors update slides"
+  ],
+  "success_metrics": [
+    "Citation Grounding Rate >= 92%",
+    "Response Latency <= 1.2s",
+    "Student satisfaction rating >= 4.5/5"
+  ],
+  "estimated_timeline_weeks": 4,
+  "required_skills": [
+    "Python",
+    "LangGraph",
+    "Vector Databases",
+    "Next.js"
+  ],
+  "recommended_tools": [
+    "ChromaDB",
+    "FastAPI",
+    "Gemini API",
+    "PyPDFium2"
+  ],
+  "revision_count": 1,
+  "sources": [
+    "https://huggingface.co/datasets/rajpurkar/squad",
+    "https://arxiv.org/abs/2005.11401"
+  ]
+}

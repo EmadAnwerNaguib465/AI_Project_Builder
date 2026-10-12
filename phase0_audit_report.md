@@ -1,5 +1,5 @@
 # PHASE 0 — PROJECT AUDIT REPORT
-## AI Project Builder — Multi-Agent AI Project Planning System
+## Planorai — Multi-Agent AI Project Planning System
 
 ---
 
