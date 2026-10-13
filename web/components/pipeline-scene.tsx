@@ -4,28 +4,10 @@ import Image from "next/image";
 import { useEffect, useRef } from "react";
 import * as THREE from "three";
 
-type Props = { active: number; complete: boolean; paused: boolean; signal: number; variant: number };
-
-function roundedCard(width: number, height: number, radius: number) {
-  const shape = new THREE.Shape();
-  shape.moveTo(-width / 2 + radius, -height / 2);
-  shape.lineTo(width / 2 - radius, -height / 2);
-  shape.quadraticCurveTo(width / 2, -height / 2, width / 2, -height / 2 + radius);
-  shape.lineTo(width / 2, height / 2 - radius);
-  shape.quadraticCurveTo(width / 2, height / 2, width / 2 - radius, height / 2);
-  shape.lineTo(-width / 2 + radius, height / 2);
-  shape.quadraticCurveTo(-width / 2, height / 2, -width / 2, height / 2 - radius);
-  shape.lineTo(-width / 2, -height / 2 + radius);
-  shape.quadraticCurveTo(-width / 2, -height / 2, -width / 2 + radius, -height / 2);
-  return new THREE.ExtrudeGeometry(shape, { depth: 0.16, bevelEnabled: true, bevelSegments: 4, steps: 1, bevelSize: 0.025, bevelThickness: 0.025, curveSegments: 8 });
-}
-
-export default function PipelineScene({ active, complete, paused, signal, variant }: Props) {
+export default function PipelineScene({ paused }: { paused: boolean }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(paused);
-  const valuesRef = useRef({ active, complete, signal, variant });
   pausedRef.current = paused;
-  valuesRef.current = { active, complete, signal, variant };
 
   useEffect(() => {
     const host = hostRef.current;
@@ -44,91 +26,64 @@ export default function PipelineScene({ active, complete, paused, signal, varian
     renderer.setClearColor(0x000000, 0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.12;
+    renderer.toneMappingExposure = 1.08;
     host.appendChild(renderer.domElement);
 
     const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 40);
-    camera.position.set(0, 0, 6.5);
-    const group = new THREE.Group();
-    scene.add(group);
+    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 30);
+    camera.position.set(0, 0, 5.9);
+    const icon = new THREE.Group();
+    scene.add(icon);
 
-    scene.add(new THREE.HemisphereLight(0xf6fff8, 0x728478, 2.0));
+    scene.add(new THREE.HemisphereLight(0xf5fff7, 0x405e50, 2.4));
     const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
-    keyLight.position.set(-3.5, 4.5, 6);
+    keyLight.position.set(-2.8, 3.8, 5);
     scene.add(keyLight);
-    const rimLight = new THREE.PointLight(0xd3a08a, 18, 12);
-    rimLight.position.set(3, -1.7, 2.5);
-    scene.add(rimLight);
+    const edgeLight = new THREE.PointLight(0xc3816d, 15, 9);
+    edgeLight.position.set(2.4, -1.8, 2.3);
+    scene.add(edgeLight);
 
-    const cardWidth = 4.55;
-    const cardHeight = 1.28;
-    const card = new THREE.Mesh(
-      roundedCard(cardWidth, cardHeight, 0.16),
-      new THREE.MeshPhysicalMaterial({ color: 0xe7eeea, metalness: 0.22, roughness: 0.3, clearcoat: 0.85, clearcoatRoughness: 0.2 }),
+    const coin = new THREE.Mesh(
+      new THREE.CylinderGeometry(1.08, 1.08, 0.16, 96, 1, false),
+      new THREE.MeshPhysicalMaterial({ color: 0x466c58, metalness: 0.7, roughness: 0.27, clearcoat: 0.9, clearcoatRoughness: 0.2 }),
     );
-    card.position.z = -0.11;
-    group.add(card);
+    coin.rotation.x = Math.PI / 2;
+    icon.add(coin);
 
-    const logoMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, toneMapped: false, side: THREE.DoubleSide, depthWrite: false });
-    const logo = new THREE.Mesh(new THREE.PlaneGeometry(cardWidth - 0.1, cardHeight - 0.1), logoMaterial);
-    logo.position.z = 0.075;
-    group.add(logo);
+    const faceMaterial = new THREE.MeshStandardMaterial({ color: 0xe8efea, metalness: 0.18, roughness: 0.34, side: THREE.DoubleSide });
+    const frontFace = new THREE.Mesh(new THREE.CircleGeometry(1.045, 96), faceMaterial);
+    frontFace.position.z = 0.082;
+    icon.add(frontFace);
+    const backFace = new THREE.Mesh(new THREE.CircleGeometry(1.045, 96), faceMaterial);
+    backFace.position.z = -0.082;
+    icon.add(backFace);
 
-    const halo = new THREE.Mesh(
-      new THREE.TorusGeometry(1.72, 0.008, 6, 160),
-      new THREE.MeshBasicMaterial({ color: 0x769985, transparent: true, opacity: 0.38 }),
-    );
-    halo.scale.set(1.42, 0.48, 1);
-    halo.position.z = -0.34;
-    group.add(halo);
-    const haloInner = new THREE.Mesh(
-      new THREE.TorusGeometry(1.65, 0.006, 6, 160),
-      new THREE.MeshBasicMaterial({ color: 0xc3816d, transparent: true, opacity: 0.3 }),
-    );
-    haloInner.scale.set(1.4, 0.44, 1);
-    haloInner.rotation.z = -0.18;
-    haloInner.position.z = -0.3;
-    group.add(haloInner);
+    const rimMaterial = new THREE.MeshStandardMaterial({ color: 0xc3816d, metalness: 0.82, roughness: 0.22 });
+    const rim = new THREE.Mesh(new THREE.TorusGeometry(1.065, 0.022, 10, 96), rimMaterial);
+    rim.position.z = 0.091;
+    icon.add(rim);
+    const backRim = new THREE.Mesh(new THREE.TorusGeometry(1.065, 0.022, 10, 96), rimMaterial);
+    backRim.position.z = -0.091;
+    icon.add(backRim);
 
-    const nodes: THREE.Mesh[] = [];
-    const nodePositions = [-2.55, -1.55, -0.52, 0.52, 1.55, 2.55];
-    nodePositions.forEach((x, index) => {
-      const material = new THREE.MeshStandardMaterial({ color: index === 4 ? 0xbd715f : 0x648671, metalness: 0.52, roughness: 0.25, emissive: 0x365344, emissiveIntensity: 0.3 });
-      const node = new THREE.Mesh(new THREE.SphereGeometry(index === 0 || index === 5 ? 0.075 : 0.045, 20, 16), material);
-      node.position.set(x, index % 2 === 0 ? -0.83 : 0.83, -0.06);
-      group.add(node);
-      nodes.push(node);
-    });
+    const iconMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, toneMapped: false, side: THREE.DoubleSide, depthWrite: false });
+    const iconGeometry = new THREE.PlaneGeometry(1.56, 1.59);
+    const frontIcon = new THREE.Mesh(iconGeometry, iconMaterial);
+    frontIcon.position.z = 0.105;
+    icon.add(frontIcon);
+    const backIcon = new THREE.Mesh(iconGeometry, iconMaterial);
+    backIcon.position.z = -0.105;
+    backIcon.rotation.y = Math.PI;
+    icon.add(backIcon);
 
-    let logoTexture: THREE.CanvasTexture | null = null;
-    let frame = 0;
+    let animationFrame = 0;
     let startedAt = performance.now();
     const loader = new THREE.TextureLoader();
-    const textureRequest = loader.load("/logo.png", (source) => {
-      const image = source.image as HTMLImageElement;
-      const width = image.naturalWidth || image.width;
-      const height = image.naturalHeight || image.height;
-      const canvas = document.createElement("canvas");
-      canvas.width = 1024;
-      canvas.height = 320;
-      const context = canvas.getContext("2d", { willReadFrequently: true });
-      if (!context) return;
-      context.drawImage(image, width * 0.14, height * 0.235, width * 0.72, height * 0.35, 0, 0, canvas.width, canvas.height);
-      const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
-      const { data } = pixels;
-      const bg = [data[0], data[1], data[2]];
-      for (let i = 0; i < data.length; i += 4) {
-        const delta = Math.max(Math.abs(data[i] - bg[0]), Math.abs(data[i + 1] - bg[1]), Math.abs(data[i + 2] - bg[2]));
-        if (delta < 10) data[i + 3] = 0;
-        else if (delta < 42) data[i + 3] = Math.round(data[i + 3] * ((delta - 10) / 32));
-      }
-      context.putImageData(pixels, 0, 0);
-      logoTexture = new THREE.CanvasTexture(canvas);
-      logoTexture.colorSpace = THREE.SRGBColorSpace;
-      logoTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-      logoMaterial.map = logoTexture;
-      logoMaterial.needsUpdate = true;
+    const markTexture = loader.load("/logo-mark.png", (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+      iconMaterial.map = texture;
+      iconMaterial.needsUpdate = true;
     });
 
     const resize = () => {
@@ -136,10 +91,9 @@ export default function PipelineScene({ active, complete, paused, signal, varian
       const height = Math.max(host.clientHeight, 1);
       renderer.setSize(width, height, false);
       camera.aspect = width / height;
-      camera.position.z = width < 620 ? 7.2 : 6.5;
+      camera.position.z = width < 620 ? 6.3 : 5.9;
       camera.updateProjectionMatrix();
-      const fit = Math.min(1, width / 560);
-      group.scale.setScalar(fit);
+      icon.scale.setScalar(Math.min(1, width / 420));
       renderer.render(scene, camera);
     };
     const observer = new ResizeObserver(resize);
@@ -147,34 +101,21 @@ export default function PipelineScene({ active, complete, paused, signal, varian
     resize();
 
     const animate = (now: number) => {
-      frame = requestAnimationFrame(animate);
+      animationFrame = requestAnimationFrame(animate);
       if (pausedRef.current) {
         startedAt = now;
         return;
       }
-      const elapsed = (now - startedAt) / 1000;
-      const values = valuesRef.current;
-      const phase = values.variant * 0.42;
-      const strength = values.complete ? 1 : values.active >= 0 ? 0.75 : 0.45;
-      group.rotation.y = Math.sin(elapsed * 0.54 + phase) * 0.11;
-      group.rotation.x = Math.sin(elapsed * 0.7 + phase) * 0.035;
-      group.rotation.z = Math.sin(elapsed * 0.38 + phase) * 0.018;
-      group.position.y = Math.sin(elapsed * 0.9 + phase) * 0.075;
-      keyLight.intensity = 2.7 + strength + Math.min(values.signal, 1) * 0.4;
-      nodes.forEach((node, index) => {
-        const material = node.material as THREE.MeshStandardMaterial;
-        const activeNode = values.complete || index <= values.active;
-        material.emissiveIntensity = activeNode ? 0.65 + Math.sin(elapsed * 2.4 + index) * 0.18 : 0.12;
-      });
+      const secondsPerTurn = 9;
+      icon.rotation.y = ((now - startedAt) / 1000 / secondsPerTurn) * Math.PI * 2;
       renderer.render(scene, camera);
     };
-    frame = requestAnimationFrame(animate);
+    animationFrame = requestAnimationFrame(animate);
 
     return () => {
-      cancelAnimationFrame(frame);
+      cancelAnimationFrame(animationFrame);
       observer.disconnect();
-      textureRequest.dispose();
-      logoTexture?.dispose();
+      markTexture.dispose();
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
           object.geometry.dispose();
@@ -187,7 +128,7 @@ export default function PipelineScene({ active, complete, paused, signal, varian
     };
   }, []);
 
-  return <div ref={hostRef} className="pipeline-scene" data-rendering={paused ? "paused" : "active"} aria-label="Animated 3D Planorai logo" role="img">
-    <div className="scene-logo-fallback"><Image src="/logo.png" alt="Planorai" width={1774} height={1024} /></div>
+  return <div ref={hostRef} className="pipeline-scene" data-rendering={paused ? "paused" : "active"} aria-label="3D Planorai logo icon rotating 360 degrees" role="img">
+    <div className="scene-logo-fallback"><Image src="/logo-mark.png" alt="Planorai logo icon" width={357} height={364} /></div>
   </div>;
 }

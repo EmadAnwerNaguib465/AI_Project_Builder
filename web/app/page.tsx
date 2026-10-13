@@ -159,7 +159,7 @@ export default function StudioPage() {
           <motion.p initial={reduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}>What will you build next?</motion.p>
         </div>
         <div className="engine-stage">
-          <PipelineScene active={activeIndex} complete={mode === "complete"} paused={scenePaused} signal={Math.min(idea.trim().length / 400, 1)} variant={selectedExample < 0 ? 1 : selectedExample} />
+          <PipelineScene paused={scenePaused || Boolean(reduceMotion)} />
           <aside className="engine-readout" aria-label="Current stage">
             <span className="eyebrow">CURRENT STAGE</span>
             <strong>{mode === "complete" ? "Plan complete" : current ? AGENTS.find((agent) => agent.id === current)?.label : mode === "error" ? "On hold" : "Awaiting brief"}</strong>
