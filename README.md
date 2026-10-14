@@ -35,7 +35,6 @@
 - [Knowledge Base Setup](#-knowledge-base-setup)
 - [Example Output](#-example-output)
 - [API Keys Guide](#-api-keys-guide)
-- [Milestones](#-milestones)
 
 ---
 
@@ -734,25 +733,6 @@ SOURCES (8)
 | `GOOGLE_API_KEY` | ✅ Yes | Yes (15 RPM) | [aistudio.google.com](https://aistudio.google.com/app/apikey) |
 | `OPENAI_API_KEY` | ❌ Optional | No (pay-per-use) | [platform.openai.com](https://platform.openai.com/api-keys) |
 | `TAVILY_API_KEY` | ❌ Optional | Yes (1000 searches/month) | [app.tavily.com](https://app.tavily.com) |
-
----
-
-## 📅 Milestones
-
-| # | Milestone | Status |
-|---|---|---|
-| 1 | Foundation — config, logging, utils | ✅ |
-| 2 | Pydantic models + LangGraph state | ✅ |
-| 3 | LLM service + 6 prompt files | ✅ |
-| 4 | Supervisor Agent | ✅ |
-| 5 | Tools + Search Service | ✅ |
-| 6 | Research Agent | ✅ |
-| 7 | Full RAG Pipeline (ChromaDB) | ✅ |
-| 8 | Architect Agent | ✅ |
-| 9 | Critic Agent + conditional routing | ✅ |
-| 10 | Report Agent | ✅ |
-| 11 | LangGraph workflow assembly | ✅ |
-| 12 | Streamlit UI | ✅ |
 
 ---
 
